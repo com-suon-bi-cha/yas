@@ -9,3 +9,4 @@ public record TaxClassVm(Long id, String name) {
         return new TaxClassVm(taxClass.getId(), taxClass.getName());
     }
 }
+// trigger Wed Jul  1 20:43:29 +07 2026
