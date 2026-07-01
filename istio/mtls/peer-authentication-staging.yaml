@@ -1,0 +1,9 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: staging-strict-mtls
+  namespace: staging
+spec:
+  mtls:
+    mode: STRICT
+

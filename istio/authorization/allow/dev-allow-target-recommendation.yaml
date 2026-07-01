@@ -1,0 +1,16 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-recommendation
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app: recommendation
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces:
+              - dev
+

@@ -1,0 +1,16 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-sampledata
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app: sampledata
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces:
+              - dev
+

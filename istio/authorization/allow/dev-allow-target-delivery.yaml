@@ -1,0 +1,16 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-delivery
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app: delivery
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces:
+              - dev
+

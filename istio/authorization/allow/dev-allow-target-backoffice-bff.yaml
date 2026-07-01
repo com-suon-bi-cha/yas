@@ -1,0 +1,16 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-backoffice-bff
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app: backoffice-bff
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces:
+              - dev
+

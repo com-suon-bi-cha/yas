@@ -1,0 +1,19 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-webhook
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app: webhook
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/dev/sa/backoffice-bff
+              - cluster.local/ns/dev/sa/order
+              - cluster.local/ns/dev/sa/payment
+              - cluster.local/ns/dev/sa/webhook
+

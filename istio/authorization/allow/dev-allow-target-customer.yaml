@@ -1,0 +1,20 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-to-customer
+  namespace: dev
+spec:
+  selector:
+    matchLabels:
+      app: customer
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/dev/sa/storefront-bff
+              - cluster.local/ns/dev/sa/backoffice-bff
+              - cluster.local/ns/dev/sa/order
+              - cluster.local/ns/dev/sa/rating
+              - cluster.local/ns/dev/sa/recommendation
+
