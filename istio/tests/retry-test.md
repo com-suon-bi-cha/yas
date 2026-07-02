@@ -28,7 +28,6 @@ metadata:
   namespace: dev
 spec:
   hosts:
-    - product
     - product.dev.svc.cluster.local
   http:
     - fault:
@@ -38,7 +37,7 @@ spec:
           httpStatus: 500
       route:
         - destination:
-            host: product
+            host: product.dev.svc.cluster.local
       retries:
         attempts: 3
         perTryTimeout: 2s
@@ -70,4 +69,3 @@ done
 kubectl delete virtualservice product-fault-test -n dev
 kubectl apply -f istio/virtual-services/dev-product-vs.yaml
 ```
-

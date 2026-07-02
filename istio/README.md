@@ -49,6 +49,8 @@ kubectl apply -f istio/mtls/peer-authentication-dev.yaml
 kubectl apply -f istio/mtls/destination-rule-dev.yaml
 ```
 
+`destination-rule-dev.yaml` chỉ khai báo `ISTIO_MUTUAL` cho các app service có sidecar. Không dùng wildcard `*.dev.svc.cluster.local`, vì wildcard sẽ ép mTLS cho cả PostgreSQL/Redis/Kafka/Keycloak/Elasticsearch nếu các service đó không có sidecar và có thể làm app bị `Connection reset`.
+
 Verify:
 
 ```bash
@@ -147,6 +149,26 @@ Rollback AuthorizationPolicy:
 kubectl delete authorizationpolicy --all -n dev
 ```
 
+## Sự cố đã gặp: app không kết nối được PostgreSQL
+
+Triệu chứng:
+
+```text
+org.postgresql.util.PSQLException: The connection attempt failed
+Caused by: java.net.SocketException: Connection reset
+```
+
+Nguyên nhân: `DestinationRule` wildcard cho `*.dev.svc.cluster.local` ép `ISTIO_MUTUAL` cho cả PostgreSQL, trong khi PostgreSQL không có Istio sidecar. Envoy gửi mTLS tới service không thuộc mesh nên kết nối bị reset.
+
+Cách xử lý:
+
+```bash
+kubectl delete destinationrule dev-default-istio-mutual -n dev
+kubectl apply -f istio/mtls/destination-rule-dev.yaml
+```
+
+File `destination-rule-dev.yaml` hiện chỉ tạo DestinationRule cho các app service có sidecar, không áp dụng cho PostgreSQL/Redis/Kafka/Keycloak/Elasticsearch.
+
 ## Dry-run trước khi apply
 
 Nếu Istio CRDs đã cài:
@@ -166,4 +188,3 @@ kubectl apply --dry-run=client -f istio/virtual-services/
 kubectl apply --dry-run=client -f istio/authorization/allow/
 kubectl apply --dry-run=client -f istio/authorization/deny-final/
 ```
-
