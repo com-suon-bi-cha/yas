@@ -393,7 +393,40 @@ sudo systemctl status jenkins-agent
 
 ---
 
-## Phase 6 — Integration & Support (Tuần 3)
+## Phase 6 — Observability Setup (Tuần 2-3)
+
+### 6.1 Cài đặt Prometheus & Grafana (Metrics)
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+kubectl create namespace monitoring
+helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
+  -n monitoring \
+  --set grafana.service.type=NodePort \
+  --set grafana.service.nodePort=30090 \
+  --set grafana.adminPassword=admin
+```
+- [ ] Verify pods running: `kubectl get pods -n monitoring`
+- [ ] Truy cập Grafana UI: `http://<GCP_EXTERNAL_IP>:30090` (User: admin / Pass: admin)
+- [ ] 📸 Screenshot: Grafana Dashboard hiển thị Kubernetes metrics
+
+### 6.2 Cài đặt Loki Stack (Logging)
+```bash
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+helm upgrade --install loki grafana/loki-stack \
+  -n monitoring \
+  --set grafana.enabled=false
+```
+- [ ] Login vào Grafana UI → Connections → Data sources → Add data source
+- [ ] Chọn **Loki**, URL: `http://loki.monitoring.svc.cluster.local:3100` → Save & test
+- [ ] 📸 Screenshot: Explore panel trong Grafana query logs thành công từ Loki
+
+---
+
+## Phase 7 — Integration & Support (Tuần 3)
 
 - [ ] Phối hợp TV2 test CI pipeline end-to-end
 - [ ] Phối hợp TV2 test developer_build + cleanup
@@ -404,7 +437,7 @@ sudo systemctl status jenkins-agent
 
 ---
 
-## Phase 7 — Documentation (Tuần 3)
+## Phase 8 — Documentation (Tuần 3)
 
 - [ ] Viết `docs/infrastructure-setup.md`: hướng dẫn step-by-step setup GCP + K3s + ArgoCD + infra
 - [ ] Ghi lại các External IP, NodePorts, credentials (không commit secrets)
@@ -424,4 +457,6 @@ sudo systemctl status jenkins-agent
 - [ ] Jenkins Agent online với label `gcp-k8s-agent`, đủ tools
 - [ ] kubeconfig-external.yaml gửi cho TV2
 - [ ] Test job chạy thành công trên gcp-k8s-agent
+- [ ] Prometheus, Grafana, Loki deployed thành công trong namespace `monitoring`
+- [ ] Truy cập được Grafana Dashboard và truy vấn được Log qua Loki
 - [ ] Báo cáo + screenshots gửi TV4
