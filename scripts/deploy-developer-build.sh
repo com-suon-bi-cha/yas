@@ -37,7 +37,7 @@ done
 
 echo "=== Applying to namespace developer-build ==="
 # Apply trực tiếp (bypass ArgoCD — faster for developer use)
-kubectl apply -k . --namespace developer-build --kubeconfig="${KUBECONFIG}" --insecure-skip-tls-verify --validate=false
+kubectl apply -k . --namespace developer-build --kubeconfig="${KUBECONFIG}" --insecure-skip-tls-verify
 
 echo "=== Waiting for pods to be ready ==="
 kubectl rollout status deployment --all -n developer-build \
