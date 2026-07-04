@@ -90,10 +90,12 @@ pipeline {
 
                     WORKER_IP=$(kubectl get nodes \
                       -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}' \
-                      --kubeconfig=${KUBECONFIG} --insecure-skip-tls-verify 2>/dev/null || \
-                      kubectl get nodes \
-                      -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' \
-                      --kubeconfig=${KUBECONFIG} --insecure-skip-tls-verify)
+                      --kubeconfig=${KUBECONFIG} --insecure-skip-tls-verify 2>/dev/null)
+                    if [ -z "${WORKER_IP}" ]; then
+                      WORKER_IP=$(kubectl get nodes \
+                        -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' \
+                        --kubeconfig=${KUBECONFIG} --insecure-skip-tls-verify 2>/dev/null)
+                    fi
 
                     echo "Worker Node IP: ${WORKER_IP}"
                     echo ""

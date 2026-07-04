@@ -40,8 +40,12 @@ echo "=== Applying to namespace developer-build ==="
 kubectl apply -k . --namespace developer-build --kubeconfig="${KUBECONFIG}" --insecure-skip-tls-verify
 
 echo "=== Waiting for pods to be ready ==="
-kubectl rollout status deployment --all -n developer-build \
-  --kubeconfig="${KUBECONFIG}" --insecure-skip-tls-verify --timeout=180s || true
+kubectl get deploy -n developer-build --no-headers \
+  --kubeconfig="${KUBECONFIG}" --insecure-skip-tls-verify \
+  -o custom-columns=NAME:.metadata.name | while read deploy; do
+    kubectl rollout status deployment/"${deploy}" -n developer-build \
+      --kubeconfig="${KUBECONFIG}" --insecure-skip-tls-verify --timeout=180s || true
+done
 
 rm -rf "${WORKDIR}"
 echo "=== Deploy developer-build completed ==="
