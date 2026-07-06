@@ -258,17 +258,17 @@ pipeline {
                                     continue
                                 }
                                 echo "Building Docker image for: ${service}"
-                                sh "docker build -t bingsu1103/${service}:${commitId} ./${servicePath}/"
-                                sh "docker push bingsu1103/${service}:${commitId}"
+                                sh "docker build --platform linux/amd64 -t ${DOCKER_USER}/${service}:${commitId} ./${servicePath}/"
+                                sh "docker push ${DOCKER_USER}/${service}:${commitId}"
 
                                 if (env.BRANCH_IS_MAIN == 'true') {
-                                    sh "docker tag bingsu1103/${service}:${commitId} bingsu1103/${service}:latest"
-                                    sh "docker push bingsu1103/${service}:latest"
+                                    sh "docker tag ${DOCKER_USER}/${service}:${commitId} ${DOCKER_USER}/${service}:latest"
+                                    sh "docker push ${DOCKER_USER}/${service}:latest"
                                 }
 
                                 if (env.GIT_TAG_MATCH == 'true') {
-                                    sh "docker tag bingsu1103/${service}:${commitId} bingsu1103/${service}:${env.GIT_TAG_NAME}"
-                                    sh "docker push bingsu1103/${service}:${env.GIT_TAG_NAME}"
+                                    sh "docker tag ${DOCKER_USER}/${service}:${commitId} ${DOCKER_USER}/${service}:${env.GIT_TAG_NAME}"
+                                    sh "docker push ${DOCKER_USER}/${service}:${env.GIT_TAG_NAME}"
                                 }
 
                                 echo "${service}:${commitId} pushed to Docker Hub"
