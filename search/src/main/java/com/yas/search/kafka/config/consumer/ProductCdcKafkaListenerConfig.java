@@ -25,7 +25,9 @@ public class ProductCdcKafkaListenerConfig extends BaseKafkaListenerConfig<Produ
     @Bean(name = PRODUCT_CDC_LISTENER_CONTAINER_FACTORY)
     @Override
     public ConcurrentKafkaListenerContainerFactory<ProductMsgKey, ProductCdcMessage> listenerContainerFactory() {
-        return super.kafkaListenerContainerFactory();
+        ConcurrentKafkaListenerContainerFactory<ProductMsgKey, ProductCdcMessage> factory = super.kafkaListenerContainerFactory();
+        factory.getContainerProperties().setAckMode(org.springframework.kafka.listener.ContainerProperties.AckMode.MANUAL);
+        return factory;
     }
 
 }
