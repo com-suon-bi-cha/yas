@@ -1,5 +1,57 @@
-\section{Observability}
+\section{Observability Cho Hệ Thống YAS}
 
-Nhóm đã triển khai bổ sung Observability trong namespace \texttt{observability}. Stack gồm Prometheus cho metrics, Grafana cho dashboard, Loki và Promtail cho log, Tempo cho distributed tracing và OpenTelemetry Collector cho việc tiếp nhận, xử lý, chuyển tiếp telemetry.
+\subsection{Phạm vi triển khai}
 
-Phần này là khung để bổ sung hình ảnh sau khi nhóm chụp UI Grafana. Các minh chứng cần ưu tiên gồm: Helm releases trong namespace \texttt{observability}, trạng thái pod/service, Prometheus targets hoặc query, Grafana datasources, JVM dashboard, Loki logs và Tempo traces. Nội dung chi tiết được chuẩn bị trong file \texttt{docs/observability-report.md}.
+Observability được triển khai trong namespace \texttt{observability} nhằm cung cấp khả năng theo dõi trạng thái hệ thống sau khi các workload được deploy bằng GitOps. Stack gồm Prometheus để lưu metrics, Grafana để hiển thị dashboard, Loki/Promtail để thu thập log, Tempo để lưu distributed trace và OpenTelemetry Collector để nhận telemetry từ các service. Phần minh chứng tập trung vào các nội dung có thể kiểm tra trực tiếp từ hệ thống hiện tại: Helm releases, pod/service, datasource, dashboard metrics và tracing.
+
+\subsection{Trạng thái triển khai Observability}
+
+Các thành phần Observability được cài bằng Helm và nằm trong namespace \texttt{observability}. Danh sách release cho thấy các chart chính như Prometheus, Grafana, Loki, Tempo, Promtail, OpenTelemetry Operator và OpenTelemetry Collector đã được triển khai.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/10-observability-helm-releases.jpg}
+\caption{Các Helm release của Observability trong namespace observability đang ở trạng thái deployed}
+\end{figure}
+
+Ở mức Kubernetes runtime, các pod và service của stack quan sát đều tồn tại trong namespace \texttt{observability}. Nhóm pod này cung cấp endpoint nội bộ để Grafana truy vấn dữ liệu metrics, logs và traces.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/11-observability-pods-services.jpg}
+\caption{Các pod và service của Observability đang chạy trong namespace observability}
+\end{figure}
+
+\subsection{Grafana datasources}
+
+Grafana được cấu hình với ba datasource chính. Prometheus được dùng cho metrics và dashboard, Loki được dùng cho log tập trung, còn Tempo được dùng cho distributed tracing. Cách tổ chức này giúp nhóm quan sát nhiều loại telemetry trên cùng một giao diện thay vì kiểm tra từng công cụ riêng lẻ.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/12-grafana-datasources.jpg}
+\caption{Grafana datasource gồm Prometheus, Loki và Tempo để truy vấn metrics, logs và traces}
+\end{figure}
+
+\subsection{Dashboard metrics}
+
+Dashboard Observability hiển thị metrics runtime của service Java trong hệ thống YAS. Các panel chính gồm tổng số HTTP request, tỷ lệ status code, request per second, thời gian xử lý trung bình, CPU, memory và một số chỉ số JVM. Khi chọn namespace và service cụ thể, dashboard hỗ trợ theo dõi sức khỏe workload sau rollout.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/13-grafana-dashboard-metrics.png}
+\caption{Grafana dashboard hiển thị metrics HTTP, JVM, CPU và memory của service trong hệ thống YAS}
+\end{figure}
+
+\subsection{Distributed tracing}
+
+Tempo lưu trace được gửi từ các service thông qua OpenTelemetry. Ảnh chụp Grafana Explore cho thấy một request đi qua \texttt{storefront-bff}, \texttt{product} và \texttt{media}, kèm theo thời gian xử lý của từng span. Minh chứng này cho thấy hệ thống có thể phân tích luồng request liên service và xác định thành phần gây độ trễ khi cần điều tra sự cố.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/14-grafana-tempo-tracing.png}
+\caption{Grafana Tempo hiển thị distributed trace của request đi qua nhiều service trong namespace dev}
+\end{figure}
+
+\subsection{Kết luận}
+
+Phần Observability đã cung cấp lớp quan sát cần thiết cho hệ thống YAS sau khi triển khai. Prometheus, Loki, Tempo và OpenTelemetry Collector đóng vai trò thu thập và lưu telemetry; Grafana là giao diện tập trung để kiểm tra dashboard và trace. Bộ minh chứng được rút gọn theo đúng phạm vi triển khai thực tế, tránh lặp lại các ảnh Prometheus target hoặc log explorer riêng khi dashboard và tracing đã thể hiện đầy đủ mục tiêu quan sát chính.

@@ -158,7 +158,7 @@ Kỳ vọng hiện tại:
 - [x] Grafana Operator quản lý `Grafana` resource ở trạng thái `complete/success`.
 - [x] Grafana đã có datasource Loki/Tempo và dashboard JVM/Hikari theo custom resources.
 - [x] OpenTelemetry Collector `READY 1/1`, nhận OTLP trên `4317`/`4318`, gửi metrics sang Prometheus và traces sang Tempo.
-- [ ] Cần chụp thêm UI Grafana cho datasource, dashboard metrics, Loki logs và Tempo traces nếu báo cáo yêu cầu bằng chứng trực quan.
+- [ ] Cần chụp thêm minh chứng rút gọn cho Observability: Helm releases, pod/service trong namespace `observability`, Grafana datasources, dashboard metrics và Tempo tracing.
 - [x] Khung báo cáo bổ sung nằm ở [observability-report.md](observability-report.md).
 
 ## Demo Check Nhanh

@@ -1,5 +1,79 @@
-\section{Hạ Tầng Triển Khai}
+\section{Hạ Tầng Kubernetes Và GitOps}
 
-Phần hạ tầng cung cấp nền tảng thực thi cho toàn bộ pipeline. Cluster K3s chạy trên máy ảo GCP, các namespace chính gồm \texttt{dev}, \texttt{staging}, \texttt{developer-build}, \texttt{argocd}, \texttt{istio-system} và \texttt{observability}. ArgoCD được cài đặt để quản lý trạng thái triển khai theo GitOps. Các secret cần thiết như Docker registry credentials và kubeconfig được cấu hình để Jenkins có thể build, push image và cập nhật manifest.
+\subsection{Nền tảng GCP và K3s}
 
-Nội dung minh chứng cho phần này gồm trạng thái VM, node Kubernetes, namespace, ArgoCD applications và các service hạ tầng.
+Hạ tầng triển khai của đồ án được đặt trên một máy ảo Google Cloud Platform. Máy ảo này chạy K3s và đóng vai trò control-plane đồng thời schedule workload ứng dụng trong giai đoạn demo. Mô hình này phù hợp với phạm vi đồ án vì giảm độ phức tạp vận hành, vẫn đảm bảo đủ môi trường để kiểm chứng CI/CD, GitOps, Service Mesh và Observability. Jenkins agent chạy trên máy local của nhóm và sử dụng kubeconfig để truy cập cluster khi pipeline cần build, cập nhật manifest hoặc kiểm thử luồng developer-build.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/01-gcp-vm-running.jpg}
+\caption{Máy ảo GCP đang ở trạng thái Running và cung cấp địa chỉ public để truy cập cluster}
+\end{figure}
+
+Các firewall rule được cấu hình để mở các cổng cần thiết cho SSH, Kubernetes API và NodePort/ingress phục vụ truy cập ứng dụng, ArgoCD, Grafana và các công cụ kiểm chứng. Các cổng này chỉ phục vụ mục tiêu triển khai và demo trong phạm vi đồ án.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/02-gcp-firewall-rules.jpg}
+\caption{Firewall rules trên GCP mở các cổng cần thiết cho SSH, Kubernetes API, NodePort và dịch vụ quan sát}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/03-k3s-node-ready.jpg}
+\caption{Node K3s ở trạng thái Ready, chứng minh cluster có thể schedule workload}
+\end{figure}
+
+\subsection{Namespace và Secret dùng chung}
+
+Cluster được chia theo namespace để tách vai trò vận hành. Namespace \texttt{dev} là môi trường kiểm thử chính và được ArgoCD đồng bộ liên tục. Namespace \texttt{staging} dùng cho kiểm thử release với hạ tầng riêng. Namespace \texttt{developer-build} phục vụ triển khai tạm thời sau khi Jenkins build branch phát triển; môi trường này dùng chung hạ tầng với \texttt{dev} và có thể được cleanup sau khi kiểm thử. Các namespace \texttt{argocd}, \texttt{istio-system} và \texttt{observability} lần lượt chứa GitOps controller, Service Mesh và hệ thống quan sát.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/04-kubernetes-namespaces.jpg}
+\caption{Các namespace chính của đồ án gồm dev, staging, developer-build, argocd, istio-system và observability}
+\end{figure}
+
+Docker registry credential được tạo dưới dạng Kubernetes secret trong các namespace triển khai. Secret này cho phép Pod pull image từ Docker Hub trong quá trình rollout, đồng thời tránh lưu thông tin đăng nhập trực tiếp trong manifest GitOps.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/05-dockerhub-pull-secrets.jpg}
+\caption{Docker Hub pull secret tồn tại trong các namespace dev, staging và developer-build}
+\end{figure}
+
+\subsection{ArgoCD và trạng thái GitOps}
+
+ArgoCD được triển khai trong namespace \texttt{argocd} để duy trì desired state của các môi trường GitOps. Các thành phần chính như application controller, repo server, API server, Dex, Redis và notifications controller đều chạy ổn định. Khi manifest trong repo GitOps thay đổi, ArgoCD phát hiện khác biệt và đồng bộ lại các workload tương ứng vào cluster.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/06-argocd-pods-running.jpg}
+\caption{Các pod ArgoCD trong namespace argocd đang ở trạng thái Running}
+\end{figure}
+
+Hai application chính là \texttt{yas-dev} và \texttt{yas-staging} được ArgoCD theo dõi. Ảnh chụp cho thấy cả hai application đạt trạng thái \texttt{Synced} và \texttt{Healthy}, xác nhận desired state trong Git đã khớp với trạng thái runtime của cluster tại thời điểm kiểm chứng.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/07-argocd-applications-synced-healthy.jpg}
+\caption{Application yas-dev và yas-staging được ArgoCD đồng bộ và đạt trạng thái Synced/Healthy}
+\end{figure}
+
+\subsection{Dịch vụ hạ tầng cho ứng dụng}
+
+Các service hạ tầng được triển khai theo từng môi trường để hỗ trợ các workload YAS. Namespace \texttt{dev} chứa PostgreSQL, Kafka, Kafka Connect, Keycloak, Redis và Elasticsearch; đồng thời được dùng chung bởi luồng \texttt{developer-build}. Namespace \texttt{staging} có nhóm hạ tầng riêng để kiểm thử release độc lập với dữ liệu dev.
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/08-dev-infrastructure-services.jpg}
+\caption{Các dịch vụ hạ tầng trong namespace dev đang Running và phục vụ môi trường dev/developer-build}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member1-report/09-staging-infrastructure-services.jpg}
+\caption{Các dịch vụ hạ tầng trong namespace staging đang Running để phục vụ kiểm thử release}
+\end{figure}
+
+PostgreSQL lưu dữ liệu nghiệp vụ cho các service. Kafka và Kafka Connect hỗ trợ luồng đồng bộ dữ liệu bất đồng bộ như Debezium CDC. Keycloak cung cấp identity và authentication. Redis hỗ trợ cache, còn Elasticsearch phục vụ tìm kiếm sản phẩm. Nhóm hạ tầng này tạo nền tảng để các phần CI/CD, GitOps và Service Mesh hoạt động trên cùng một cluster.
