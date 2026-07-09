@@ -1,41 +1,127 @@
-\section{GitOps Và Kustomize}
+\section{GitOps Deployment Với ArgoCD Và Kustomize}
 \label{sec:gitops}
 
-\subsection{Cấu trúc repo GitOps}
+\subsection{Kiến trúc repo GitOps}
 
-Repo \texttt{gitops-manifest-k8s} là nguồn cấu hình triển khai cho Kubernetes. Repo này tổ chức manifest theo mô hình \texttt{base} và \texttt{overlays}. \texttt{base} định nghĩa Deployment, Service, ServiceAccount và cấu hình chung của từng workload. Các overlay \texttt{dev}, \texttt{staging} và \texttt{developer-build} điều chỉnh image tag, namespace, replica và cấu hình môi trường.
-
-Khi Jenkins build và push image thành công, script \texttt{update-gitops-manifest.sh} clone repo GitOps, chạy \texttt{kustomize edit set image} để cập nhật tag mới, sau đó commit và push. Commit message có dạng \texttt{ci(<env>): update <N> service(s) to <tag>}, giúp truy vết rõ ràng service nào được cập nhật trong lần triển khai nào.
+Repo \texttt{gitops-manifest-k8s} được tách khỏi repo mã nguồn YAS và đóng vai trò nguồn chân lý cho trạng thái triển khai. Cách tổ chức này phân tách vòng đời build ứng dụng với vòng đời cấu hình Kubernetes, đồng thời lưu lại lịch sử thay đổi image tag và manifest bằng Git. Thư mục \texttt{base} chứa Deployment, Service và ServiceAccount dùng chung; các thư mục \texttt{environments/dev}, \texttt{environments/staging} và \texttt{environments/developer-build} chứa cấu hình riêng cho từng môi trường.
 
 \begin{figure}[H]
 \centering
-\reportimg{member2-report/09-gitops-commit.png}
-\caption{Commit do Jenkins tạo trong repo \texttt{gitops-manifest-k8s} để cập nhật image tag}
+\reportimg{member3-gitops/01-repository-structure.png}
+\caption{Cấu trúc repo \texttt{gitops-manifest-k8s} gồm manifest dùng chung và ba overlay môi trường}
 \end{figure}
 
-\subsection{ArgoCD đồng bộ triển khai}
+\subsection{Base manifest và phạm vi workload}
 
-ArgoCD theo dõi repo GitOps và đồng bộ trạng thái mong muốn vào cluster. Khi Jenkins cập nhật image tag trong repo manifest, ArgoCD phát hiện thay đổi và rollout workload tương ứng trong namespace \texttt{dev} hoặc \texttt{staging}. Stage \texttt{Update GitOps --- Dev} chạy khi pipeline trên branch \texttt{main} thành công. Stage \texttt{Update GitOps --- Staging} chỉ chạy khi có release tag dạng \texttt{vX.Y.Z} tại HEAD.
+Mỗi workload ứng dụng được mô tả bằng các tài nguyên Kubernetes độc lập. Nhãn \texttt{app} và \texttt{serviceAccountName} được chuẩn hóa theo tên workload để hỗ trợ selector, định tuyến và Istio AuthorizationPolicy. Ngoài các dịch vụ thương mại điện tử cốt lõi, phạm vi GitOps bổ sung \texttt{location} cho dependency nghiệp vụ và \texttt{kafka-connect} cho luồng Debezium/CDC.
 
-Cơ chế này bảo đảm quy trình CD có lịch sử rõ ràng, có thể truy vết qua commit GitOps và trạng thái ArgoCD. Không có thao tác \texttt{kubectl apply} thủ công nào từ pipeline CI --- toàn bộ triển khai đều đi qua repo manifest.
+\begin{table}[H]
+\centering
+\caption{Phạm vi workload do các overlay GitOps quản lý}
+\begin{tabular}{|p{0.20\textwidth}|p{0.68\textwidth}|}
+\hline
+\textbf{Môi trường} & \textbf{Workload} \\
+\hline
+\texttt{dev}, \texttt{staging} &
+16 workload ứng dụng: \texttt{product}, \texttt{cart}, \texttt{order},
+\texttt{customer}, \texttt{inventory}, \texttt{tax}, \texttt{payment},
+\texttt{media}, \texttt{search}, \texttt{location}, \texttt{storefront-bff},
+\texttt{storefront-ui}, \texttt{backoffice-bff}, \texttt{backoffice-ui},
+\texttt{swagger-ui}, \texttt{sampledata}; cùng workload hỗ trợ
+\texttt{kafka-connect}. \\
+\hline
+\texttt{developer-build} &
+16 workload ứng dụng; Service ứng dụng được chuyển sang NodePort để phục vụ
+kiểm thử branch. \\
+\hline
+\end{tabular}
+\end{table}
 
 \begin{figure}[H]
 \centering
-\reportimg{member2-report/10-argocd-dev-synced.png}
-\caption{ArgoCD application \texttt{yas-dev} ở trạng thái Synced sau khi GitOps update}
+\reportimg{member3-gitops/02-location-deployment-manifest.png}
+\caption{Deployment manifest của \texttt{location} với ServiceAccount, image, tài nguyên và health probe}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/03-kafka-connect-manifest.png}
+\caption{Manifest \texttt{kafka-connect} sử dụng Debezium Connect và kết nối tới Kafka trong cluster}
+\end{figure}
+
+\subsection{Kustomize overlays}
+
+Overlay \texttt{dev} kết hợp \texttt{base}, \texttt{location}, \texttt{kafka-connect}, cấu hình connector và các chính sách Istio. Các patch được dùng để điều chỉnh host, chiến lược rollout và cấu hình riêng của UI mà không sao chép toàn bộ manifest. Image của từng workload được khai báo trong trường \texttt{images}; theo luồng CD, Jenkins cập nhật \texttt{newTag} bằng short commit SHA sau khi build và push image thành công.
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/04-dev-overlay-kustomization.png}
+\caption{Overlay \texttt{dev} tổng hợp workload, Kafka Connect, connector và cấu hình Istio}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/05-dev-image-tags.png}
+\caption{Overlay \texttt{dev} ghi nhận image tag dạng Git commit SHA cho các workload đã được build}
+\end{figure}
+
+Overlay \texttt{staging} sử dụng cùng nhóm base workload và Kafka Connect, nhưng đặt namespace, replica, host và image tag theo môi trường staging. Release tag dạng \texttt{vX.Y.Z} được ghi vào \texttt{newTag}, cho phép liên kết phiên bản triển khai với mốc phát hành của mã nguồn.
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/06-staging-overlay-kustomization.png}
+\caption{Overlay \texttt{staging} khai báo workload, chính sách Istio và image tag theo phiên bản phát hành}
+\end{figure}
+
+Overlay \texttt{developer-build} phục vụ kiểm thử branch tạm thời. Patch \texttt{nodeport-patch.yaml} chuyển Service ứng dụng sang NodePort, nhưng loại trừ \texttt{identity} bằng \texttt{labelSelector}; Service này tiếp tục dùng ExternalName để tham chiếu identity tại namespace \texttt{dev}. Các patch dependency tương ứng cũng trỏ workload thử nghiệm tới hạ tầng dùng chung ở \texttt{dev}, qua đó hạn chế nhân bản thành phần dữ liệu.
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/07-developer-build-overlay.png}
+\caption{Overlay \texttt{developer-build} cấu hình NodePort, loại trừ identity và tái sử dụng hạ tầng dev}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/08-developer-build-nodeport-services.png}
+\caption{Các Service ứng dụng trong namespace \texttt{developer-build} sử dụng NodePort; identity giữ kiểu ExternalName}
+\end{figure}
+
+\subsection{ArgoCD đồng bộ trạng thái triển khai}
+
+ArgoCD theo dõi repo GitOps và đối chiếu desired state với trạng thái thực tế trong cluster. Khi Jenkins commit image tag mới, ArgoCD phát hiện thay đổi và biểu diễn sai lệch bằng trạng thái \texttt{OutOfSync}. Stage \texttt{Update GitOps --- Dev} chạy sau pipeline thành công trên branch \texttt{main}; stage \texttt{Update GitOps --- Staging} chạy khi commit tại HEAD có release tag dạng \texttt{vX.Y.Z}. Ảnh chụp staging ghi nhận thời điểm ứng dụng vẫn \texttt{Healthy} nhưng desired state mới chưa được đồng bộ; do đó ảnh này minh chứng khả năng phát hiện sai lệch của ArgoCD, không được dùng để khẳng định rollout staging đã hoàn tất. Pipeline không áp dụng trực tiếp manifest ứng dụng bằng \texttt{kubectl apply}; quyền hội tụ trạng thái thuộc về ArgoCD.
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/09-argocd-staging-out-of-sync.png}
+\caption{ArgoCD ghi nhận \texttt{yas-staging} Healthy/OutOfSync khi desired state trên Git khác trạng thái đang chạy}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/10-argocd-dev-synced.png}
+\caption{Application \texttt{yas-dev} đồng bộ repo \texttt{gitops-manifest-k8s} và đạt trạng thái Synced/Healthy}
+\end{figure}
+
+\subsection{Kiểm chứng trạng thái runtime}
+
+Sau khi ArgoCD đồng bộ, các Pod ứng dụng, Kafka Connect và thành phần hạ tầng trong namespace \texttt{dev} đạt trạng thái \texttt{Running}. Giá trị \texttt{READY} là \texttt{2/2} cho thấy container ứng dụng và Istio sidecar đều sẵn sàng.
+
+\begin{figure}[H]
+\centering
+\reportimg{member3-gitops/11-dev-workloads-running.png}
+\caption{Các workload ứng dụng và hạ tầng trong namespace \texttt{dev} ở trạng thái \texttt{Running}}
 \end{figure}
 
 \subsection{Luồng triển khai end-to-end}
 
-Luồng triển khai từ commit đến rollout được tóm tắt như sau:
-
 \begin{enumerate}
 \item Developer push code lên GitHub.
-\item Jenkins Multibranch Pipeline phát hiện thay đổi, chạy CI stages (test, quality, security scan).
-\item Jenkins build Docker image, push lên Docker Hub với tag là short commit SHA.
-\item Jenkins chạy script \texttt{update-gitops-manifest.sh}, commit image tag mới vào repo GitOps.
-\item ArgoCD phát hiện commit mới, đồng bộ manifest vào namespace tương ứng.
-\item Kubernetes rollout workload với image mới.
+\item Jenkins Multibranch Pipeline phát hiện thay đổi và thực hiện kiểm thử, quality gate và security scan.
+\item Jenkins build Docker image, push lên registry với tag là short commit SHA.
+\item Jenkins cập nhật image tag và tạo commit trong repo GitOps.
+\item ArgoCD phát hiện commit mới và đồng bộ overlay vào namespace tương ứng.
+\item Kubernetes rollout workload; readiness probe và trạng thái ArgoCD xác nhận kết quả triển khai.
 \end{enumerate}
 
-Toàn bộ luồng này không yêu cầu thao tác thủ công sau khi developer push code. Pipeline tự động xử lý từ bước CI đến CD, và ArgoCD đảm bảo trạng thái cluster luôn khớp với repo manifest.
+Thiết kế này tạo chuỗi truy vết từ commit mã nguồn, image trên registry, commit manifest đến revision đang chạy trong Kubernetes. Kustomize giảm trùng lặp cấu hình giữa các môi trường, còn ArgoCD duy trì cơ chế đồng bộ và phát hiện sai lệch trạng thái.
