@@ -13,6 +13,7 @@ import com.yas.customer.viewmodel.useraddress.UserAddressVm;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -59,12 +60,15 @@ public class UserAddressService {
     }
 
     public AddressDetailVm getAddressDefault() {
+        return findAddressDefault()
+            .orElseThrow(() -> new NotFoundException(Constants.ErrorCode.USER_ADDRESS_NOT_FOUND));
+    }
+
+    public Optional<AddressDetailVm> findAddressDefault() {
         String userId = getUserId();
 
-        UserAddress userAddress = userAddressRepository.findByUserIdAndIsActiveTrue(userId)
-            .orElseThrow(() -> new NotFoundException(Constants.ErrorCode.USER_ADDRESS_NOT_FOUND));
-
-        return locationService.getAddressById(userAddress.getAddressId());
+        return userAddressRepository.findByUserIdAndIsActiveTrue(userId)
+            .map(userAddress -> locationService.getAddressById(userAddress.getAddressId()));
     }
 
     public UserAddressVm createAddress(AddressPostVm addressPostVm) {

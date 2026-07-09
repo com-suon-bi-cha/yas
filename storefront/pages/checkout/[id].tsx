@@ -90,6 +90,10 @@ const Checkout = () => {
   useEffect(() => {
     getUserAddressDefault()
       .then((res) => {
+        if (!res) {
+          setAddShippingAddress(true);
+          return;
+        }
         setShippingAddress(res);
         setBillingAddress(res);
       })
