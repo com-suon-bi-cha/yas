@@ -18,6 +18,7 @@ declare -A SERVICE_MAP=(
     ["TAG__INVENTORY"]="inventory"
     ["TAG__PAYMENT"]="payment"
     ["TAG__CUSTOMER"]="customer"
+    ["TAG__LOCATION"]="location"
     ["TAG__CART"]="cart"
     ["TAG__TAX"]="tax"
     ["TAG__SEARCH"]="search"

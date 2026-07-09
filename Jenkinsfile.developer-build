@@ -8,6 +8,7 @@ pipeline {
         string(name: 'inventory',       defaultValue: 'main', description: 'Branch for inventory service')
         string(name: 'payment',         defaultValue: 'main', description: 'Branch for payment service')
         string(name: 'customer',        defaultValue: 'main', description: 'Branch for customer service')
+        string(name: 'location',        defaultValue: 'main', description: 'Branch for location service')
         string(name: 'cart',            defaultValue: 'main', description: 'Branch for cart service')
         string(name: 'tax',             defaultValue: 'main', description: 'Branch for tax service')
         string(name: 'search',          defaultValue: 'main', description: 'Branch for search service')
@@ -30,6 +31,7 @@ pipeline {
                         'inventory':      'inventory',
                         'payment':        'payment',
                         'customer':       'customer',
+                        'location':       'location',
                         'cart':           'cart',
                         'tax':            'tax',
                         'search':         'search',

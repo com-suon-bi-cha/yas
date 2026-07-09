@@ -2,17 +2,17 @@ def changedFiles = []
 def backendServices = [
     'common-library',
     'media', 'product', 'order', 'inventory', 'payment', 'sampledata',
-    'customer', 'cart', 'tax', 'search',
+    'customer', 'location', 'cart', 'tax', 'search',
     'backoffice-bff', 'storefront-bff'
 ]
 def coverageServices = [
     'media', 'product', 'order', 'inventory', 'payment', 'sampledata',
-    'customer', 'cart', 'tax', 'search',
+    'customer', 'location', 'cart', 'tax', 'search',
     'backoffice-bff', 'storefront-bff'
 ]
 def dockerServices = [
     'media', 'product', 'order', 'inventory', 'payment',
-    'sampledata', 'customer', 'cart', 'tax', 'search',
+    'sampledata', 'customer', 'location', 'cart', 'tax', 'search',
     'backoffice-bff', 'storefront-bff', 'backoffice', 'storefront'
 ]
 
