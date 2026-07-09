@@ -15,6 +15,7 @@ import com.yas.customer.viewmodel.address.AddressPostVm;
 import com.yas.customer.viewmodel.address.AddressVm;
 import com.yas.customer.viewmodel.useraddress.UserAddressVm;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +33,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 class UserAddressControllerTest {
 
     private static final String USER_ADDRESS_BASE_URL = "/storefront/user-address";
+    private static final String USER_ADDRESSES_BASE_URL = "/storefront/user-addresses";
 
     @MockitoBean
     private UserAddressService userAddressService;
@@ -62,12 +64,34 @@ class UserAddressControllerTest {
     void testGetDefaultAddress_whenNormalCase_responseAddressDetailVm() throws Exception {
 
         AddressDetailVm addressDetailVm = getAddressDetailVm();
-        when(userAddressService.getAddressDefault()).thenReturn(addressDetailVm);
+        when(userAddressService.findAddressDefault()).thenReturn(Optional.of(addressDetailVm));
 
         mockMvc.perform(MockMvcRequestBuilders.get(USER_ADDRESS_BASE_URL + "/default-address")
                 .accept("application/json"))
             .andExpect(MockMvcResultMatchers.status().isOk())
             .andExpect(MockMvcResultMatchers.content().json(objectWriter.writeValueAsString(addressDetailVm)));
+    }
+
+    @Test
+    void testGetDefaultAddress_pluralAlias_whenNormalCase_responseAddressDetailVm() throws Exception {
+
+        AddressDetailVm addressDetailVm = getAddressDetailVm();
+        when(userAddressService.findAddressDefault()).thenReturn(Optional.of(addressDetailVm));
+
+        mockMvc.perform(MockMvcRequestBuilders.get(USER_ADDRESSES_BASE_URL + "/default-address")
+                .accept("application/json"))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(MockMvcResultMatchers.content().json(objectWriter.writeValueAsString(addressDetailVm)));
+    }
+
+    @Test
+    void testGetDefaultAddress_whenNoDefaultAddress_responseNoContent() throws Exception {
+
+        when(userAddressService.findAddressDefault()).thenReturn(Optional.empty());
+
+        mockMvc.perform(MockMvcRequestBuilders.get(USER_ADDRESS_BASE_URL + "/default-address")
+                .accept("application/json"))
+            .andExpect(MockMvcResultMatchers.status().isNoContent());
     }
 
     @Test
@@ -78,6 +102,18 @@ class UserAddressControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.post(USER_ADDRESS_BASE_URL)
                 .contentType("application/json")
             .content(objectWriter.writeValueAsString(userAddressVm)))
+            .andExpect(MockMvcResultMatchers.status().isOk())
+            .andExpect(MockMvcResultMatchers.content().json(objectWriter.writeValueAsString(userAddressVm)));
+    }
+
+    @Test
+    void testCreateAddress_pluralAlias_whenNormalCase_responseUserAddressVm() throws Exception {
+        UserAddressVm userAddressVm = getUserAddressVm();
+        when(userAddressService.createAddress(any(AddressPostVm.class))).thenReturn(userAddressVm);
+
+        mockMvc.perform(MockMvcRequestBuilders.post(USER_ADDRESSES_BASE_URL)
+                .contentType("application/json")
+                .content(objectWriter.writeValueAsString(userAddressVm)))
             .andExpect(MockMvcResultMatchers.status().isOk())
             .andExpect(MockMvcResultMatchers.content().json(objectWriter.writeValueAsString(userAddressVm)));
     }

@@ -19,8 +19,11 @@ export async function getUserAddress() {
   return response.json();
 }
 
-export async function getUserAddressDefault(): Promise<Address> {
+export async function getUserAddressDefault(): Promise<Address | undefined> {
   const response = await apiClientService.get(`${userAddressUrl}/default-address`);
+  if (response.status === 204 || response.status === 404) {
+    return undefined;
+  }
   if (response.status >= 200 && response.status < 300) {
     return await response.json();
   }
