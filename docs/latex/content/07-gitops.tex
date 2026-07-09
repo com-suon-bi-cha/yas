@@ -89,12 +89,12 @@ Overlay \texttt{developer-build} phục vụ kiểm thử branch tạm thời. P
 
 \subsection{ArgoCD đồng bộ trạng thái triển khai}
 
-ArgoCD theo dõi repo GitOps và đối chiếu desired state với trạng thái thực tế trong cluster. Khi Jenkins commit image tag mới, ArgoCD phát hiện thay đổi và biểu diễn sai lệch bằng trạng thái \texttt{OutOfSync}. Stage \texttt{Update GitOps --- Dev} chạy sau pipeline thành công trên branch \texttt{main}; stage \texttt{Update GitOps --- Staging} chạy khi commit tại HEAD có release tag dạng \texttt{vX.Y.Z}. Ảnh chụp staging ghi nhận thời điểm ứng dụng vẫn \texttt{Healthy} nhưng desired state mới chưa được đồng bộ; do đó ảnh này minh chứng khả năng phát hiện sai lệch của ArgoCD, không được dùng để khẳng định rollout staging đã hoàn tất. Pipeline không áp dụng trực tiếp manifest ứng dụng bằng \texttt{kubectl apply}; quyền hội tụ trạng thái thuộc về ArgoCD.
+ArgoCD theo dõi repo GitOps và đối chiếu desired state với trạng thái thực tế trong cluster. Khi Jenkins commit image tag mới, ArgoCD có thể tạm thời hiển thị \texttt{OutOfSync} để cho biết Git và cluster chưa hội tụ; sau khi đồng bộ hoàn tất, trạng thái đúng để nghiệm thu triển khai là \texttt{Synced/Healthy}. Stage \texttt{Update GitOps --- Dev} chạy sau pipeline thành công trên branch \texttt{main}; stage \texttt{Update GitOps --- Staging} chạy khi commit tại HEAD có release tag dạng \texttt{vX.Y.Z}. Pipeline không áp dụng trực tiếp manifest ứng dụng bằng \texttt{kubectl apply}; quyền hội tụ trạng thái thuộc về ArgoCD.
 
 \begin{figure}[H]
 \centering
-\reportimg{member3-gitops/09-argocd-staging-out-of-sync.png}
-\caption{ArgoCD ghi nhận \texttt{yas-staging} Healthy/OutOfSync khi desired state trên Git khác trạng thái đang chạy}
+\reportimg{member3-gitops/09-argocd-staging-synced.png}
+\caption{Application \texttt{yas-staging} đồng bộ repo \texttt{gitops-manifest-k8s} và đạt trạng thái Synced/Healthy}
 \end{figure}
 
 \begin{figure}[H]

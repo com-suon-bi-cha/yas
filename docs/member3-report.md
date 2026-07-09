@@ -129,7 +129,7 @@ Caption: Overlay staging quản lý cùng scope workload với dev.
 ```
 
 ```markdown
-![ArgoCD Staging](images/member3-report/08-argocd-staging.png)
+![ArgoCD Staging](images/member3-report/08-argocd-staging-synced.png)
 Caption: ArgoCD yas-staging ở trạng thái Synced/Healthy tại thời điểm chụp.
 ```
 
