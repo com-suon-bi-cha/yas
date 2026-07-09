@@ -27,7 +27,7 @@ TV1 không trực tiếp viết manifest app chính, nhưng phải đảm bảo 
 - [x] Cluster đang chạy.
 - [x] ArgoCD app `yas-dev` đã kiểm tra `Synced/Healthy`.
 - [x] ArgoCD app `yas-staging` đã kiểm tra `Synced/Healthy`.
-- [ ] Kiểm tra lại ngay trước khi chụp báo cáo vì Jenkins có thể vừa đẩy GitOps commit mới.
+- [x] Kiểm tra lại ngay trước khi chụp báo cáo vì Jenkins có thể vừa đẩy GitOps commit mới.
 - [x] Namespace `dev` có workload app và infra Running.
 - [x] Namespace `staging` có workload app và infra Running.
 - [x] Namespace `dev`, `staging`, `developer-build` có Istio sidecar injection.

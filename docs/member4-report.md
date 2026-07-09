@@ -12,7 +12,7 @@ Viết 1 đoạn 5-8 câu:
 - AuthorizationPolicy dựa trên ServiceAccount.
 - Kiali dùng để quan sát topology và mTLS.
 
-## 2. Cấu Hình Istio Trong GitOps
+## 2. Cấu Hình Istio Trong GitOps Và Kiali
 
 Nội dung viết:
 
@@ -22,12 +22,11 @@ Nội dung viết:
 - `environments/dev/istio/retry.yaml`: retry policy.
 - `environments/dev/istio/authorization.yaml`: AuthorizationPolicy.
 
-Screenshot cần chèn:
+Screenshot đã có:
 
-```markdown
-![GitOps Istio Files](images/member4-report/01-gitops-istio-files.png)
-Caption: Các manifest Istio được quản lý trong repo gitops-manifest-k8s.
-```
+![Kiali Istio Config Overview](images/member4-report/01-kiali-istio-config-overview.png)
+
+Caption: Kiali Istio Config trong namespace `dev` hiển thị các resource đại diện gồm `AuthorizationPolicy`, `DestinationRule`, `PeerAuthentication` và `VirtualService` đều hợp lệ, chứng minh cấu hình Istio đã được apply vào cluster.
 
 ## 3. Istio System Và Sidecar
 
@@ -39,17 +38,23 @@ kubectl get ns dev staging developer-build --show-labels
 kubectl get pods -n dev
 ```
 
-Screenshot cần chèn:
+Screenshot đã có:
 
-```markdown
-![Istio System Pods](images/member4-report/02-istio-system-pods.png)
-Caption: Các thành phần Istio, Kiali, Prometheus và Grafana đang Running.
-```
+![Istio System Pods And Services](images/member4-report/02-istio-system-pods-services.png)
 
-```markdown
-![Dev Pods Sidecar](images/member4-report/03-dev-pods-sidecar.png)
-Caption: Pod trong namespace dev có trạng thái 2/2, chứng minh sidecar đã được inject.
-```
+Caption: Các thành phần Istio, Kiali, Prometheus và Grafana trong namespace `istio-system` đang Running và service tương ứng đã được tạo.
+
+![Namespace Sidecar Injection Labels](images/member4-report/03-namespace-sidecar-injection-labels.png)
+
+Caption: Các namespace `dev`, `staging` và `developer-build` có label `istio-injection=enabled`, cho phép Istio tự động inject sidecar.
+
+![Dev Pod Sidecar Containers](images/member4-report/04-dev-pods-sidecar-containers.png)
+
+Caption: Pod trong namespace `dev` có cả container ứng dụng và container `istio-proxy`, chứng minh sidecar đã được inject.
+
+![Dev Pods Running 2 Of 2](images/member4-report/05-dev-pods-running-2of2.png)
+
+Caption: Các pod ứng dụng trong namespace `dev` ở trạng thái `2/2 Running`, nghĩa là workload và sidecar đều sẵn sàng.
 
 ## 4. mTLS STRICT
 
@@ -61,17 +66,11 @@ kubectl get destinationrule -n dev
 kubectl describe peerauthentication dev-strict-mtls -n dev
 ```
 
-Screenshot cần chèn:
+Screenshot đã có:
 
-```markdown
-![PeerAuthentication Strict](images/member4-report/04-peer-authentication-strict.png)
-Caption: PeerAuthentication dev-strict-mtls bật mTLS STRICT cho namespace dev.
-```
+![mTLS PeerAuthentication And DestinationRules](images/member4-report/06-mtls-peer-authentication-destinationrules.png)
 
-```markdown
-![DestinationRules](images/member4-report/05-destination-rules.png)
-Caption: DestinationRule cấu hình ISTIO_MUTUAL cho các app service trong scope.
-```
+Caption: `PeerAuthentication dev-strict-mtls` bật mTLS `STRICT` cho namespace `dev`, đồng thời các `DestinationRule` cấu hình `ISTIO_MUTUAL` cho service trong scope.
 
 Nội dung viết:
 
@@ -87,12 +86,11 @@ kubectl get virtualservice -n dev
 kubectl describe virtualservice tax-retry -n dev
 ```
 
-Screenshot cần chèn:
+Screenshot đã có:
 
-```markdown
-![VirtualService Retry](images/member4-report/06-virtualservice-retry.png)
-Caption: VirtualService tax-retry cấu hình attempts=3, perTryTimeout=2s và retryOn cho lỗi tạm thời.
-```
+![VirtualService Tax Retry](images/member4-report/07-virtualservice-tax-retry.png)
+
+Caption: `VirtualService tax-retry` cấu hình `attempts=3`, `perTryTimeout=2s` và `retryOn` cho lỗi tạm thời.
 
 Nội dung viết:
 
@@ -108,17 +106,7 @@ kubectl get authorizationpolicy -n dev
 kubectl describe authorizationpolicy allow-to-payment -n dev
 ```
 
-Screenshot cần chèn:
-
-```markdown
-![Authorization Policies](images/member4-report/07-authorization-policies.png)
-Caption: Namespace dev có AuthorizationPolicy kiểm soát traffic vào từng workload.
-```
-
-```markdown
-![Allow To Payment](images/member4-report/08-allow-to-payment.png)
-Caption: Policy allow-to-payment chỉ cho storefront-bff, backoffice-bff, order và ingress gateway gọi payment.
-```
+Minh chứng screenshot cho phần này được gộp ở mục 7 để tránh lặp ảnh: ảnh `08-authz-allow-deny-curl-test.png` vừa thể hiện danh sách `AuthorizationPolicy`, vừa thể hiện kết quả allow/deny bằng `curl`.
 
 ## 7. Test Allow/Deny
 
@@ -147,17 +135,11 @@ Kết quả đã kiểm chứng:
 - `storefront-bff` SA -> `product`: `200`
 - `search` SA -> `payment`: `403 RBAC: access denied`
 
-Screenshot cần chèn:
+Screenshot đã có:
 
-```markdown
-![Allowed Curl 200](images/member4-report/09-allowed-curl-200.png)
-Caption: Request hợp lệ từ storefront-bff tới product trả về 200.
-```
+![AuthorizationPolicy Allow Deny Curl Test](images/member4-report/08-authz-allow-deny-curl-test.png)
 
-```markdown
-![Denied Curl 403](images/member4-report/10-denied-curl-403.png)
-Caption: Request không hợp lệ từ search tới payment bị Istio chặn với RBAC 403.
-```
+Caption: Namespace `dev` có `AuthorizationPolicy` kiểm soát traffic vào workload; request hợp lệ trả về `200`, trong khi request không hợp lệ từ ServiceAccount `search` tới `payment` bị chặn với `403 RBAC: access denied`.
 
 ## 8. Kiali Visualization
 
@@ -173,22 +155,15 @@ Truy cập:
 http://localhost:20001
 ```
 
-Screenshot cần chèn:
+Screenshot đã có:
 
-```markdown
-![Kiali Graph](images/member4-report/11-kiali-graph.png)
-Caption: Kiali graph thể hiện topology traffic giữa các service trong namespace dev.
-```
+![Kiali Overview Namespaces](images/member4-report/09-kiali-overview-namespaces.png)
 
-```markdown
-![Kiali Security](images/member4-report/12-kiali-security.png)
-Caption: Kiali Security view hiển thị mTLS lock cho các kết nối trong mesh.
-```
+Caption: Kiali Overview hiển thị các namespace trong mesh và trạng thái tổng quan của môi trường.
 
-```markdown
-![Kiali Workload Metrics](images/member4-report/13-kiali-workload-metrics.png)
-Caption: Metrics của workload trong Kiali dùng để quan sát traffic và lỗi.
-```
+![Kiali Service Graph mTLS](images/member4-report/10-kiali-service-graph-mtls.png)
+
+Caption: Kiali Service Graph trong namespace `dev` thể hiện topology traffic giữa các service, có biểu tượng lock cho kết nối mTLS và panel metrics để quan sát request/error.
 
 ## 9. Ingress Demo
 
@@ -205,16 +180,24 @@ curl -H 'Host: storefront.dev.yas.local.com' http://127.0.0.1:18080/api/payment/
 
 Kết quả đã kiểm chứng:
 
-- Storefront: `200`
-- Swagger: `200`
-- Product categories: `200`
-- Payment providers: `200`, body `[]`
+- Storefront trả về HTML có title `Yas - Storefront`, chứng minh route frontend qua ingress hoạt động.
+- Swagger trả về HTML `Swagger UI`, chứng minh route tài liệu API qua ingress hoạt động.
+- Product categories trả về JSON danh mục sản phẩm, chứng minh route API `product` qua ingress hoạt động.
+- Payment providers trả về `[]`, chứng minh route API `payment` qua ingress hoạt động dù hiện chưa có provider dữ liệu.
 
-Screenshot cần chèn:
+Screenshot đã có:
 
-```markdown
-![Ingress Curl Checks](images/member4-report/14-ingress-curl-checks.png)
-Caption: Các endpoint chính truy cập qua Istio ingress trả về HTTP 200.
+![Ingress Curl Checks](images/member4-report/11-ingress-curl-checks.png)
+
+Caption: Các endpoint chính truy cập qua Istio ingress đều trả về HTTP `200`, gồm Storefront, Swagger UI, Product categories và Payment providers.
+
+Lệnh đã dùng để screenshot dễ đọc hơn:
+
+```bash
+curl -s -o /tmp/storefront.html -w 'storefront: %{http_code}\n' -H 'Host: storefront.dev.yas.local.com' http://127.0.0.1:18080/
+curl -s -o /tmp/swagger.html -w 'swagger: %{http_code}\n' -H 'Host: swagger.dev.yas.local.com' http://127.0.0.1:18080/swagger-ui/
+curl -s -o /tmp/categories.json -w 'product categories: %{http_code}\n' -H 'Host: storefront.dev.yas.local.com' http://127.0.0.1:18080/api/product/storefront/categories
+curl -s -o /tmp/payment-providers.json -w 'payment providers: %{http_code}\n' -H 'Host: storefront.dev.yas.local.com' http://127.0.0.1:18080/api/payment/storefront/payment-providers
 ```
 
 ## 10. Kết Luận
