@@ -1,313 +1,154 @@
-# Đồ Án 2 — CD Pipeline: Kế Hoạch Tổng Thể
+# Đồ Án 2 - Kế Hoạch Tổng Thể CI/CD, GitOps Và Service Mesh
 
-## I. Kiến Trúc Hệ Thống
+Tài liệu này mô tả kiến trúc và phân công hiện tại của Project 2. Chi tiết trạng thái live nằm ở [project2-cicd-scope-plan.md](project2-cicd-scope-plan.md).
 
-```
+## 1. Kiến Trúc Tổng Quan
+
+```text
 Developer push code
-        │
-        ▼
-GitHub Webhook ──► Jenkins Controller (AWS EC2 t3.small)
-                            │
-                            ▼ dispatch job
-                   Jenkins Agent (GCP VM — gcp-k8s-agent)
-                    ├── mvn test (service thay đổi)
-                    ├── docker build + push → Docker Hub
-                    └── update gitops-manifest-k8s repo
-                                    │
-                                    ▼ ArgoCD polls
-                           gitops-manifest-k8s (GitHub)
-                                    │
-                        ┌───────────┴───────────┐
-                        ▼                       ▼
-                  namespace dev          namespace staging
-                  (auto-sync)         (manual sync, tag v*)
-                        │                       │
-                  K3s Cluster (GCP VM — all-in-one)
-                  └── dev     namespace: microservices
-                  └── staging namespace: microservices
-                  └── developer-build: NodePort services
-                  └── argocd:          ArgoCD
-                  └── istio-system:    Istio + Kiali
+        |
+        v
+GitHub webhook
+        |
+        v
+Jenkins multibranch pipeline
+        |
+        +-- test/build selected services
+        +-- docker build/push -> Docker Hub bingsu1103
+        +-- update gitops-manifest-k8s
+                         |
+                         v
+                    ArgoCD watches
+                         |
+             +-----------+------------+
+             v                        v
+        namespace dev           namespace staging
+             |
+             v
+      K3s cluster on GCP VM
+      + infra: Postgres, Kafka, Keycloak, Redis, Elasticsearch
+      + GitOps workloads
+      + Istio/Kiali/Prometheus/Grafana
 ```
 
----
+## 2. Scope Hiện Tại
 
-## II. Quyết Định Kiến Trúc
+### Workload ứng dụng
 
-### GCP VM — All-in-One
-**Chọn e2-standard-8 (32GB RAM, 8 vCPU, 100GB SSD)**
+`dev` và `staging` hiện deploy 16 workload ứng dụng:
 
-| Component | RAM |
-|-----------|-----|
-| K3s + OS | ~2 GB |
-| Jenkins Agent | ~3 GB |
-| ArgoCD | ~1 GB |
-| Istio + Kiali + Prometheus | ~3 GB |
-| PostgreSQL | ~2 GB |
-| Keycloak | ~1 GB |
-| Kafka + Zookeeper | ~2 GB |
-| Elasticsearch | ~2 GB |
-| Redis | ~0.5 GB |
-| App pods (19 svc) | ~8 GB |
-| **Tổng** | **~25 GB** |
-
-> 16GB quá nguy hiểm. Tối thiểu 32GB.
-
-### GitOps Repo — Tách Riêng
-Dùng repo riêng `gitops-manifest-k8s` (không chung repo source code):
-- ArgoCD chỉ watch repo này → không bị trigger bởi code commit bình thường
-- Audit trail rõ ràng: ai thay đổi manifest, khi nào
-- Separation of concerns: dev chỉ cần đọc, CI mới được write
-
-### Kustomize (không dùng Helm thuần)
-- TV2 update tag bằng 1 lệnh: `kustomize edit set image`
-- Patch service type (NodePort/ClusterIP) theo environment dễ hơn Helm
-- ArgoCD hỗ trợ native, không cần plugin
-- Repo đã có Helm charts trong `k8s/charts/` → dùng làm tham khảo port/env, không deploy từ đây
-
-### developer-build dùng infra của dev namespace
-Để tiết kiệm RAM, `developer-build` namespace kết nối tới PostgreSQL/Kafka/Keycloak đã chạy trong `dev` namespace qua cross-namespace DNS: `postgres.dev.svc.cluster.local`
-
----
-
-## III. Convention Toàn Team
-
-| Item | Giá trị |
-|------|---------|
-| Docker Hub account | `bingsu1103` |
-| Image format | `bingsu1103/<service>:<tag>` |
-| Tag: feature branch | `<short-commit-id>` (7 chars) |
-| Tag: main branch | `latest` + `<short-commit-id>` |
-| Tag: release | `v1.2.3` |
-| Jenkins Agent label | `gcp-k8s-agent` |
-| Namespaces | `dev`, `staging`, `developer-build`, `argocd`, `istio-system` |
-| GitOps repo | `gitops-manifest-k8s` |
-| Kustomize structure | `base/` + `environments/{dev,staging,developer-build}/` |
-
----
-
-## IV. Luồng Dữ Liệu End-to-End
-
-### Luồng 1: Feature Branch → Docker Hub
-```
-git push feature/tax-fix
-  → webhook → Jenkins multibranch trigger
-  → detect changed: tax/
-  → mvn test -pl tax
-  → docker build bingsu1103/tax:<commit-id>
-  → docker push bingsu1103/tax:<commit-id>
+```text
+product
+cart
+order
+customer
+inventory
+tax
+payment
+media
+search
+location
+storefront-bff
+storefront-ui
+backoffice-bff
+backoffice-ui
+swagger-ui
+sampledata
 ```
 
-### Luồng 2: Main Merge → Dev Namespace (ArgoCD)
-```
-git merge → main
-  → Jenkins CI: build image + push tag latest + <commit-id>
-  → scripts/update-gitops-manifest.sh dev
-      → git clone gitops-manifest-k8s
-      → kustomize edit set image bingsu1103/tax=bingsu1103/tax:<commit-id>
-      → git push
-  → ArgoCD detects change (30s poll)
-  → ArgoCD sync → kubectl apply -k environments/dev/
-  → pods rolling update trong namespace dev
+### Workload hỗ trợ
+
+```text
+kafka-connect
 ```
 
-### Luồng 3: Tag Release → Staging (ArgoCD)
-```
-git tag v1.2.3 && git push origin v1.2.3
-  → Jenkins detects tag v*
-  → build image tag v1.2.3
-  → scripts/update-gitops-manifest.sh staging
-  → ArgoCD yas-staging: manual sync (hoặc auto)
-  → pods update trong namespace staging
-```
+`kafka-connect` phục vụ Debezium/CDC, không tính là workload ứng dụng chính.
 
-### Luồng 4: developer_build Job
-```
-Developer mở Jenkins → developer_build job
-  → nhập parameters: tax=feature/tax-fix, còn lại=main
-  → Jenkins resolve tags:
-      tax → git ls-remote origin feature/tax-fix → <commit-id>
-      product, cart, ... → latest
-  → clone gitops-manifest-k8s
-  → patch environments/developer-build/ image tags
-  → kubectl apply -k environments/developer-build/ --namespace developer-build
-  → kubectl rollout status...
-  → in bảng: tax → <GCP-IP>:3XXXX, product → <GCP-IP>:3XXXX, ...
-  → Developer thêm <GCP-IP> yas.local.com vào /etc/hosts → test
+### Ngoài scope deploy hiện tại
+
+```text
+promotion
+rating
+delivery
+recommendation
+webhook
+payment-paypal
 ```
 
----
+Các service này chỉ được đưa vào nếu có kịch bản demo riêng và phải cập nhật đồng bộ CI, GitOps, Istio, báo cáo.
 
-## V. Danh Sách Services + Ports Thực Tế
+## 3. Environment
 
-Tra từ `application.properties` từng service:
+| Environment | Trạng thái | Scope | Ghi chú |
+|-------------|------------|-------|---------|
+| `dev` | `Synced/Healthy` khi kiểm tra gần nhất | 16 app workload + `kafka-connect` | Có mTLS, retry, AuthorizationPolicy; kiểm tra lại nếu Jenkins vừa tạo GitOps commit mới |
+| `staging` | `Synced/Healthy` khi kiểm tra gần nhất | 16 app workload + `kafka-connect` | Có Gateway/VirtualService ingress, chưa bật đầy đủ Service Mesh policy |
+| `developer-build` | Deployment `0/0`, NodePort Service tồn tại | 16 app workload | Job Jenkins sẽ scale/deploy khi test branch |
 
-| # | Service | App Port | NodePort (developer-build) |
-|:-:|---------|:--------:|:--------------------------:|
-| 1 | product | 8080 | auto-assigned |
-| 2 | payment | 8081 | auto-assigned |
-| 3 | media | 8083 | auto-assigned |
-| 4 | cart | 8084 | auto-assigned |
-| 5 | order | 8085 | auto-assigned |
-| 6 | location | 8086 | auto-assigned |
-| 7 | backoffice-bff | 8087 | auto-assigned |
-| 8 | storefront-bff | 8087 | auto-assigned |
-| 9 | customer | 8088 | auto-assigned |
-| 10 | rating | 8089 | auto-assigned |
-| 11 | inventory | 8090 | auto-assigned |
-| 12 | tax | 8091 | auto-assigned |
-| 13 | promotion | 8092 | auto-assigned |
-| 14 | search | 8092 | auto-assigned |
-| 15 | webhook | 8092 | auto-assigned |
-| 16 | payment-paypal | 8093 | auto-assigned |
-| 17 | sampledata | 8094 | auto-assigned |
-| 18 | recommendation | 8095 | auto-assigned |
-| 19 | delivery | 8080 | auto-assigned |
+## 4. Công Nghệ Sử Dụng
 
-> NodePort được K8s auto-assign (range 30000–32767). Jenkins job query và in ra bảng sau khi deploy.
+| Nhóm | Công nghệ |
+|------|-----------|
+| CI | Jenkins Multibranch Pipeline |
+| Registry | Docker Hub `bingsu1103/*` |
+| CD | ArgoCD |
+| Manifest | Kustomize trong repo `gitops-manifest-k8s` |
+| Cluster | K3s trên GCP VM |
+| Service Mesh | Istio |
+| Observability | Kiali, Prometheus, Grafana |
+| Auth | Keycloak + BFF pattern |
+| Data/CDC | PostgreSQL, Kafka, Debezium/Kafka Connect, Elasticsearch |
 
----
+## 5. Phân Công Thành Viên
 
-## VI. Phân Chia Công Việc
+| Thành viên | Phạm vi chính | Tài liệu chi tiết | Report skeleton |
+|------------|---------------|-------------------|-----------------|
+| TV1 | GCP VM, K3s, namespaces, infra services, ArgoCD, Jenkins agent | [member1-tasks.md](member1-tasks.md) | [member1-report.md](member1-report.md) |
+| TV2 | Jenkins CI/CD, Docker build/push, developer-build, cleanup, GitOps update script | [member2-tasks.md](member2-tasks.md) | [member2-report.md](member2-report.md) |
+| TV3 | GitOps manifests, Kustomize overlays, dev/staging/developer-build, ArgoCD app resources | [member3-tasks.md](member3-tasks.md) | [member3-report.md](member3-report.md) |
+| TV4 | Istio Service Mesh, mTLS, AuthorizationPolicy, retry, Kiali, tổng hợp bằng chứng | [member4-tasks.md](member4-tasks.md) | [member4-report.md](member4-report.md) |
 
-### TV1 — Hạ Tầng GCP + K8s + ArgoCD + Infrastructure
-Chi tiết: `docs/member1-tasks.md`
+## 6. Dependency Giữa Các Thành Viên
 
-| Phase | Nội dung | Thời gian |
-|-------|----------|-----------|
-| 1 | GCP VM provision + tools | Ngày 1-2 |
-| 2 | K3s + namespaces + secrets | Ngày 2-3 |
-| 3 | ArgoCD install + Applications | Ngày 4-5 |
-| 4 | **Infrastructure services** (Postgres, Kafka, Keycloak, ES, Redis) | Tuần 2 |
-| 5 | Jenkins Agent (JNLP) | Tuần 2 |
-| 6 | Integration + fix | Tuần 3 |
+```text
+TV1 dựng cluster + infra + ArgoCD
+    -> TV3 có nơi sync GitOps
+    -> TV2 có kubeconfig/Jenkins agent để deploy
+    -> TV4 có Istio/Kiali và app pods để kiểm thử mesh
 
-### TV2 — CI/CD Pipelines
-Chi tiết: `docs/member2-tasks.md`
+TV3 tạo GitOps manifests
+    -> TV2 update image tag trong overlay
+    -> TV4 dựa vào ServiceAccount/app labels để viết AuthorizationPolicy
 
-| Phase | Nội dung | Thời gian |
-|-------|----------|-----------|
-| 1 | `Jenkinsfile.ci` (test + docker build + push + gitops update) | Tuần 1 |
-| 2 | `Jenkinsfile.developer-build` | Tuần 1-2 |
-| 3 | `Jenkinsfile.cleanup` | Tuần 2 |
-| 4 | Scripts: `update-gitops-manifest.sh`, `deploy-developer-build.sh` | Tuần 1-2 |
-| 5 | Test E2E toàn pipeline | Tuần 3 |
+TV2 build/push image và update GitOps
+    -> ArgoCD rollout dev/staging
+    -> TV4 có traffic thật để chụp Kiali
 
-### TV3 — GitOps Manifests (repo gitops-manifest-k8s)
-Chi tiết: `docs/member3-tasks.md`
-
-| Phase | Nội dung | Thời gian |
-|-------|----------|-----------|
-| 1 | Base manifests: Deployment + Service + **ServiceAccount** (x19) | Tuần 1 |
-| 2 | Environment overlays: dev, staging, developer-build | Tuần 1-2 |
-| 3 | NodePort patch + validate | Tuần 2 |
-| 4 | Dry-run + ArgoCD sync test | Tuần 2-3 |
-
-> TV3 KHÔNG viết infrastructure manifests — TV1 deploy infra bằng Helm từ k8s/deploy/.
-
-### TV4 — Service Mesh (Istio) + Báo Cáo
-Chi tiết: `docs/member4-tasks.md`
-
-| Phase | Nội dung | Thời gian |
-|-------|----------|-----------|
-| 1 | Viết YAML: PeerAuth, DestRule, AuthzPolicy, VirtualService | Tuần 1 (độc lập) |
-| 2 | Cài Istio + Kiali (sau khi TV1 xong cluster) | Tuần 2 |
-| 3 | Apply mTLS + verify | Tuần 2 |
-| 4 | Apply AuthzPolicy + test curl 200/403 | Tuần 2-3 |
-| 5 | Test retry policy (fault injection) | Tuần 3 |
-| 6 | Kiali topology screenshots | Tuần 3 |
-| 7 | Báo cáo docx tổng hợp | Tuần 3 |
-
----
-
-## VII. Dependencies Giữa Các TV
-
-```
-TV3 viết manifests (Tuần 1)
-    └──► TV1 dùng manifests → connect ArgoCD (Tuần 1-2)
-    └──► ServiceAccount trong manifests → TV4 cần cho AuthzPolicy (Tuần 2)
-
-TV2 viết Jenkinsfile (Tuần 1)
-    └──► Cần TV1: Jenkins Agent label gcp-k8s-agent
-    └──► Cần TV1: kubeconfig credential
-    └──► Cần TV3: gitops repo structure (environments/ path)
-
-TV4 apply Istio (Tuần 2)
-    └──► Cần TV1: cluster ready
-    └──► Cần TV3: ServiceAccount có trong manifests
-    └──► Cần TV1: label namespace istio-injection=enabled TRƯỚC khi deploy pods
+TV4 bật mesh/policy và kiểm chứng security
+    -> nhóm có bằng chứng NC2 và nội dung báo cáo Service Mesh
 ```
 
-**Critical path:** TV1 Phase 1-2 phải xong trước Tuần 2 để các TV còn lại integration test.
+## 7. Kịch Bản Demo Tối Thiểu
 
----
+1. Chứng minh ArgoCD `yas-dev` và `yas-staging` ở trạng thái ổn định tại thời điểm demo; nếu `yas-dev` đang rollout, chờ pod ready rồi chụp lại.
+2. Chứng minh `dev` có 16 app workload + `kafka-connect` Running.
+3. Truy cập storefront qua Istio ingress.
+4. Truy cập swagger qua Istio ingress.
+5. Gọi API product categories qua BFF.
+6. Gọi API payment providers qua BFF.
+7. Chứng minh Service Mesh:
+   - pod có sidecar `2/2`;
+   - `PeerAuthentication STRICT`;
+   - `DestinationRule ISTIO_MUTUAL`;
+   - retry policy;
+   - allowed curl `200`;
+   - denied curl `403 RBAC`;
+   - Kiali graph/security.
 
-## VIII. YAS Service Communication Map (cho TV4)
+## 8. Checklist Trước Khi Viết Báo Cáo LaTeX
 
-```
-storefront-bff  → product, media, cart, order, customer, rating,
-                  search, promotion, tax, location
-backoffice-bff  → product, media, order, inventory, promotion,
-                  rating, webhook, customer, location
-order           → inventory, payment, customer, cart, tax, webhook
-cart            → product, promotion, tax
-customer        → location
-payment         → webhook, payment-paypal
-delivery        → order
-recommendation  → product, order
-```
-
----
-
-## IX. Điểm Số Mapping
-
-| Yêu cầu | Điểm | Người phụ trách |
-|---------|------|----------------|
-| K8s Cluster (YC2) | cơ bản | TV1 |
-| CI Image Build & Push (YC3) | cơ bản | TV2 |
-| Job developer_build (YC4) | cơ bản | TV2 + TV3 |
-| Job Cleanup (YC5) | cơ bản | TV2 |
-| ArgoCD dev + staging (NC1) | +2đ | TV1 + TV2 + TV3 |
-| Service Mesh mTLS + AuthzPolicy + Retry (NC2) | +2đ | TV4 |
-| **Tổng tối đa** | **10đ** | |
-
----
-
-## X. Timeline 3 Tuần
-
-| | TV1 | TV2 | TV3 | TV4 |
-|--|-----|-----|-----|-----|
-| **Tuần 1** | GCP VM + K3s + ArgoCD | Jenkinsfile.ci + developer_build | Base manifests + ServiceAccounts | Viết Istio YAML (độc lập) |
-| **Tuần 2** | Infra services + Jenkins Agent | Cleanup + scripts + integration | Overlays + NodePort + dry-run | Cài Istio + apply mTLS + AuthzPolicy |
-| **Tuần 3** | Fix issues + support | Test E2E + fix | Validate + ArgoCD sync | Retry test + Kiali + Báo cáo |
-
----
-
-## XI. Files Cần Tạo (trong repo yas)
-
-```
-Jenkinsfile.ci
-Jenkinsfile.developer-build
-Jenkinsfile.cleanup
-scripts/
-├── update-gitops-manifest.sh
-└── deploy-developer-build.sh
-istio/
-├── peer-authentication.yaml
-├── destination-rule.yaml
-├── authorization/
-│   ├── deny-all.yaml
-│   ├── allow-storefront-bff.yaml
-│   ├── allow-backoffice-bff.yaml
-│   ├── allow-order.yaml
-│   ├── allow-cart.yaml
-│   ├── allow-payment.yaml
-│   ├── allow-customer.yaml
-│   └── allow-recommendation.yaml
-└── virtual-services/
-    ├── product-vs.yaml
-    ├── order-vs.yaml
-    ├── payment-vs.yaml
-    ├── cart-vs.yaml
-    └── inventory-vs.yaml
-```
+- [ ] Các task docs của 4 thành viên khớp scope hiện tại.
+- [ ] Mỗi thành viên điền report skeleton của mình.
+- [ ] Screenshot được đặt trong thư mục thống nhất, ví dụ `docs/images/member1-report/`.
+- [ ] Mỗi ảnh có caption tiếng Việt và mô tả ngắn ý nghĩa.
+- [ ] Không đưa service ngoài scope vào báo cáo như workload đã deploy, trừ khi nói rõ là ngoài scope hoặc tài nguyên cũ.

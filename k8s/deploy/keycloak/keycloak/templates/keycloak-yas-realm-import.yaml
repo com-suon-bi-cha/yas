@@ -33,6 +33,8 @@ spec:
     oauth2DevicePollingInterval: 5
     enabled: true
     sslRequired: none
+    attributes:
+      frontendUrl: {{ .Values.storefrontDemoRedirectUrl }}
     registrationAllowed: true
     registrationEmailAsUsername: false
     rememberMe: false
@@ -821,6 +823,8 @@ spec:
         secret: ZrU9I0q2uXBglBnmvyJdkl1lf0ncr8tn
         redirectUris:
           - {{ .Values.storefrontRedirectUrl }}/*
+          - {{ .Values.storefrontLocalRedirectUrl }}/*
+          - {{ .Values.storefrontDemoRedirectUrl }}/*
           - http://localhost:8087/*
         webOrigins: [ ]
         notBefore: 0
@@ -839,6 +843,7 @@ spec:
           saml.assertion.signature: 'false'
           saml.force.post.binding: 'false'
           saml.multivalued.roles: 'false'
+          exclude.issuer.from.auth.response: 'true'
           saml.encrypt: 'false'
           post.logout.redirect.uris: +
           oauth2.device.authorization.grant.enabled: 'false'

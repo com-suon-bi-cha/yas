@@ -2,6 +2,21 @@
 YAS is a pet project aim to practice building a typical microservice application in Java
 https://github.com/nashtech-garage/yas
 
+## Project 2 CI/CD Docs
+
+Các tài liệu Project 2 hiện tại dùng cho báo cáo CI/CD, GitOps và Service Mesh:
+
+- [project2-plan.md](project2-plan.md): kiến trúc tổng thể và phân công thành viên.
+- [project2-cicd-scope-plan.md](project2-cicd-scope-plan.md): source of truth về scope deploy hiện tại.
+- [member1-tasks.md](member1-tasks.md): công việc TV1 - hạ tầng, K3s, ArgoCD, infra.
+- [member2-tasks.md](member2-tasks.md): công việc TV2 - Jenkins CI/CD.
+- [member3-tasks.md](member3-tasks.md): công việc TV3 - GitOps/Kustomize.
+- [member4-tasks.md](member4-tasks.md): công việc TV4 - Istio/Kiali/Service Mesh.
+- [member-report.md](member-report.md): mục lục khung báo cáo theo thành viên.
+- [member1-report.md](member1-report.md), [member2-report.md](member2-report.md), [member3-report.md](member3-report.md), [member4-report.md](member4-report.md): khung nội dung để chuyển sang báo cáo LaTeX.
+
+Scope Project 2 hiện tại: 16 workload ứng dụng (`product`, `cart`, `order`, `customer`, `inventory`, `tax`, `payment`, `media`, `search`, `location`, `storefront-bff`, `storefront-ui`, `backoffice-bff`, `backoffice-ui`, `swagger-ui`, `sampledata`) và workload hỗ trợ `kafka-connect` trong `dev`/`staging`.
+
 ## Table of Contents
 
 - [Repo setup](#repo-setup)
