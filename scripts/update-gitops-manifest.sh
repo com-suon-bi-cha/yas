@@ -70,6 +70,7 @@ declare -A SERVICE_PATHS=(
     ["payment"]="payment"
     ["sampledata"]="sampledata"
     ["customer"]="customer"
+    ["location"]="location"
     ["cart"]="cart"
     ["tax"]="tax"
     ["search"]="search"
