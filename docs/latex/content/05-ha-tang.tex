@@ -1,0 +1,5 @@
+\section{Hạ Tầng Triển Khai}
+
+Phần hạ tầng cung cấp nền tảng thực thi cho toàn bộ pipeline. Cluster K3s chạy trên máy ảo GCP, các namespace chính gồm \texttt{dev}, \texttt{staging}, \texttt{developer-build}, \texttt{argocd}, \texttt{istio-system} và \texttt{observability}. ArgoCD được cài đặt để quản lý trạng thái triển khai theo GitOps. Các secret cần thiết như Docker registry credentials và kubeconfig được cấu hình để Jenkins có thể build, push image và cập nhật manifest.
+
+Nội dung minh chứng cho phần này gồm trạng thái VM, node Kubernetes, namespace, ArgoCD applications và các service hạ tầng.

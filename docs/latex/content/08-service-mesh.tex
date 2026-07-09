@@ -1,0 +1,119 @@
+\section{Service Mesh Với Istio, Security Policy Và Kiali}
+
+\subsection{Mục tiêu và phạm vi}
+
+Phần Service Mesh tập trung vào cấu hình và kiểm chứng luồng giao tiếp giữa các service của hệ thống YAS bằng Istio. Phạm vi chính gồm ingress routing, sidecar injection, mTLS, DestinationRule, retry policy, AuthorizationPolicy, kiểm thử allow/deny và trực quan hóa bằng Kiali. Môi trường \texttt{dev} được dùng để kiểm chứng chi tiết các chính sách mesh. Môi trường \texttt{staging} được bổ sung overlay Istio riêng với mTLS, DestinationRule, retry policy và AuthorizationPolicy tương ứng để đáp ứng yêu cầu triển khai ở môi trường tiền sản xuất.
+
+\subsection{Cấu hình Istio}
+
+Cấu hình Istio được quản lý theo hướng GitOps trong repo manifest. Gateway và VirtualService ở lớp base định tuyến request từ ingress gateway tới Storefront, Swagger UI và các BFF/API tương ứng. Overlay \texttt{dev} và \texttt{staging} bổ sung các resource bảo mật và điều phối traffic, gồm \texttt{PeerAuthentication}, \texttt{DestinationRule}, \texttt{VirtualService} retry và \texttt{AuthorizationPolicy}. Các file staging được tách riêng tại \texttt{environments/staging/istio} để host và ServiceAccount principal trỏ đúng namespace \texttt{staging}.
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/01-kiali-istio-config-overview.png}
+\caption{Kiali Istio Config hiển thị các resource đại diện trong namespace \texttt{dev}}
+\end{figure}
+
+Hình trên cho thấy các resource Istio chính tồn tại trong namespace \texttt{dev} và có trạng thái hợp lệ. Các nhóm cấu hình đại diện gồm access policy, mTLS, routing và retry. Đây là bằng chứng trực quan cho việc cấu hình Istio đã được đồng bộ vào cluster.
+
+\subsection{Sidecar injection và trạng thái Istio system}
+
+Istio system, Kiali, Prometheus và Grafana được triển khai trong namespace \texttt{istio-system}. Namespace \texttt{dev}, \texttt{staging} và \texttt{developer-build} được gắn label \texttt{istio-injection=enabled} để Istio tự động inject sidecar vào pod ứng dụng.
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/02-istio-system-pods-services.png}
+\caption{Các thành phần Istio, Kiali, Prometheus và Grafana đang chạy trong \texttt{istio-system}}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/03-namespace-sidecar-injection-labels.png}
+\caption{Các namespace triển khai có label \texttt{istio-injection=enabled}}
+\end{figure}
+
+Kết quả kiểm tra pod trong namespace \texttt{dev} cho thấy mỗi pod ứng dụng có container nghiệp vụ và container \texttt{istio-proxy}. Trạng thái \texttt{2/2 Running} chứng minh workload và sidecar đều sẵn sàng.
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/04-dev-pods-sidecar-containers.png}
+\caption{Pod trong \texttt{dev} có container ứng dụng và sidecar \texttt{istio-proxy}}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/05-dev-pods-running-2of2.png}
+\caption{Các pod ứng dụng trong \texttt{dev} ở trạng thái \texttt{2/2 Running}}
+\end{figure}
+
+\subsection{mTLS và DestinationRule}
+
+Namespace \texttt{dev} sử dụng \texttt{PeerAuthentication} ở chế độ \texttt{STRICT}. Cấu hình này yêu cầu traffic service-to-service trong mesh phải sử dụng mTLS. Các \texttt{DestinationRule} tương ứng cấu hình \texttt{ISTIO\_MUTUAL} cho các service có sidecar, giúp client trong mesh sử dụng TLS do Istio quản lý khi gọi nội bộ.
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/06-mtls-peer-authentication-destinationrules.png}
+\caption{PeerAuthentication STRICT và DestinationRule ISTIO\_MUTUAL trong namespace \texttt{dev}}
+\end{figure}
+
+Cách cấu hình này giới hạn phạm vi áp dụng vào các service trong mesh, tránh ảnh hưởng tới thành phần hạ tầng hoặc workload không có sidecar.
+
+\subsection{Retry policy}
+
+Retry policy được triển khai bằng \texttt{VirtualService}. Các service quan trọng trong luồng nghiệp vụ như \texttt{product}, \texttt{cart}, \texttt{order}, \texttt{tax}, \texttt{payment} và \texttt{inventory} có cấu hình retry cho lỗi tạm thời. Ví dụ minh chứng là \texttt{tax-retry} với số lần thử lại và thời gian timeout trên từng lần thử.
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/07-virtualservice-tax-retry.png}
+\caption{VirtualService \texttt{tax-retry} cấu hình retry cho lỗi tạm thời}
+\end{figure}
+
+Retry policy giúp tăng độ ổn định của service-to-service traffic trong trường hợp lỗi mạng ngắn hạn hoặc backend phản hồi không ổn định trong thời gian ngắn.
+
+\subsection{AuthorizationPolicy và kiểm thử allow/deny}
+
+AuthorizationPolicy được dùng để giới hạn quyền truy cập giữa các service dựa trên ServiceAccount. Cách tiếp cận này phù hợp với microservices vì mỗi workload có ServiceAccount riêng, từ đó chính sách có thể định nghĩa rõ service nào được gọi service nào.
+
+Nhóm kiểm thử hai trường hợp đại diện. Trường hợp hợp lệ sử dụng ServiceAccount \texttt{storefront-bff} gọi endpoint health của \texttt{product} và nhận HTTP \texttt{200}. Trường hợp không hợp lệ sử dụng ServiceAccount \texttt{search} gọi \texttt{payment} và bị Istio RBAC chặn với HTTP \texttt{403}.
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/08-authz-allow-deny-curl-test.png}
+\caption{Kiểm thử AuthorizationPolicy: request hợp lệ trả \texttt{200}, request không hợp lệ bị chặn với \texttt{403 RBAC}}
+\end{figure}
+
+Kết quả này chứng minh policy không chỉ tồn tại ở manifest mà đã có hiệu lực ở runtime.
+
+\subsection{Kiali visualization}
+
+Kiali được sử dụng để quan sát topology, traffic và trạng thái bảo mật trong service mesh. Overview cho biết namespace nằm trong mesh và graph thể hiện quan hệ gọi giữa các service. Trong Service Graph, biểu tượng khóa trên các cạnh kết nối là minh chứng trực quan cho traffic được bảo vệ bằng mTLS.
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/09-kiali-overview-namespaces.png}
+\caption{Kiali Overview hiển thị các namespace trong mesh}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/10-kiali-service-graph-mtls.png}
+\caption{Kiali Service Graph thể hiện topology, traffic và mTLS trong namespace \texttt{dev}}
+\end{figure}
+
+Kiali bổ sung góc nhìn vận hành cho phần cấu hình YAML. Thông qua graph, nhóm có thể kiểm tra service nào đang phát sinh traffic, kết nối nào có mTLS và workload nào cần điều chỉnh policy.
+
+\subsection{Kiểm chứng Istio ingress}
+
+Istio ingress gateway được kiểm chứng bằng cách port-forward service \texttt{istio-ingressgateway} và gửi request với Host header tương ứng. Các endpoint đại diện gồm Storefront, Swagger UI, Product categories và Payment providers đều trả HTTP \texttt{200}.
+
+\begin{figure}[H]
+\centering
+\reportimg{member4-report/11-ingress-curl-checks.png}
+\caption{Kiểm chứng ingress: các endpoint chính đều trả HTTP \texttt{200}}
+\end{figure}
+
+Kết quả này xác nhận Gateway và VirtualService đã định tuyến đúng request từ ingress vào các service trong hệ thống.
+
+\subsection{Kết luận phần Service Mesh}
+
+Phần Service Mesh đã hoàn thành các yêu cầu chính: sidecar injection, mTLS, DestinationRule, retry policy, AuthorizationPolicy, kiểm thử allow/deny, Kiali visualization và ingress routing. Các minh chứng bằng hình ảnh cho thấy cấu hình trong \texttt{dev} đã được apply và có hiệu lực ở runtime. Overlay \texttt{staging} đã được tách riêng trong repo GitOps để áp dụng cùng nhóm chính sách mesh cho môi trường tiền triển khai mà không phụ thuộc trực tiếp vào cấu hình namespace \texttt{dev}.

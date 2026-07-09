@@ -1,0 +1,7 @@
+\section{CI/CD Với Jenkins}
+
+Jenkins đảm nhiệm quy trình CI/CD cho các workload trong scope hiện tại. Pipeline thực hiện các bước chính: chọn service cần build, chạy kiểm tra cần thiết, build Docker image, push image lên Docker Hub với repository \texttt{bingsu1103/*}, sau đó cập nhật image tag trong repo GitOps. Cách tổ chức này giúp tách riêng mã nguồn ứng dụng và trạng thái triển khai, đồng thời giảm thao tác thủ công khi phát hành service mới.
+
+Ngoài pipeline triển khai chính, nhóm còn cấu hình luồng \texttt{developer-build}. Luồng này cho phép build và triển khai tạm thời service từ branch phát triển vào namespace \texttt{developer-build}. Deployment trong namespace này được scale về \texttt{0/0} khi không sử dụng để tiết kiệm tài nguyên cluster.
+
+Minh chứng cho phần này gồm Jenkins dashboard, pipeline stages, Docker Hub tags và kết quả developer-build.

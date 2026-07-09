@@ -1,0 +1,14 @@
+\section{Tổng Quan Kiến Trúc Pipeline}
+
+Hệ thống YAS được triển khai theo mô hình CI/CD kết hợp GitOps. Source code ứng dụng và manifest triển khai được tách thành hai nguồn quản lý độc lập. Khi có thay đổi mã nguồn, Jenkins Multibranch Pipeline thực hiện build/test, đóng gói Docker image và push image lên Docker Hub. Sau đó pipeline cập nhật image tag trong repo \texttt{gitops-manifest-k8s}. ArgoCD theo dõi repo GitOps và đồng bộ trạng thái mong muốn vào Kubernetes cluster.
+
+\begin{figure}[H]
+\centering
+\fbox{\begin{minipage}{0.88\textwidth}
+\centering
+\texttt{GitHub} $\rightarrow$ \texttt{Jenkins CI/CD} $\rightarrow$ \texttt{Docker Hub} $\rightarrow$ \texttt{GitOps Manifest} $\rightarrow$ \texttt{ArgoCD} $\rightarrow$ \texttt{K3s Cluster}
+\end{minipage}}
+\caption{Luồng triển khai tổng quát của Project 2}
+\end{figure}
+
+Trong cluster, namespace \texttt{dev} và \texttt{staging} đều được quản lý bằng GitOps. Namespace \texttt{dev} là môi trường kiểm thử chính cho Service Mesh, còn \texttt{staging} có overlay Istio riêng để đáp ứng yêu cầu triển khai chính sách mesh ở môi trường tiền triển khai. Hai môi trường này có sidecar injection, mTLS, retry policy và AuthorizationPolicy. Namespace \texttt{developer-build} phục vụ triển khai tạm thời cho branch khi chạy job kiểm thử. Namespace \texttt{observability} chứa các thành phần quan sát hệ thống như Prometheus, Grafana, Loki, Tempo, Promtail và OpenTelemetry Collector.

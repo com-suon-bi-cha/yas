@@ -1,0 +1,5 @@
+\section{Kết Luận}
+
+Đồ án đã xây dựng được quy trình triển khai theo hướng CI/CD và GitOps cho hệ thống YAS. Jenkins đảm nhiệm build/test/push image và cập nhật manifest. ArgoCD đồng bộ trạng thái triển khai từ repo GitOps vào cluster K3s. Istio được sử dụng để bổ sung Service Mesh cho môi trường \texttt{dev} và \texttt{staging}, bao gồm mTLS, retry, AuthorizationPolicy và ingress routing. Kiali và Observability stack cung cấp minh chứng trực quan cho trạng thái vận hành của hệ thống.
+
+Kết quả hiện tại cho thấy nhóm đã triển khai được pipeline và hạ tầng cần thiết để vận hành các workload chính trong scope. Các bước tiếp theo khi hoàn thiện báo cáo là bổ sung đầy đủ hình ảnh minh chứng cho phần hạ tầng, CI/CD, GitOps và Observability, sau đó rà soát lại số hiệu hình, caption và trạng thái cluster tại thời điểm nộp.

@@ -1,0 +1,21 @@
+\section{Phân Công Công Việc}
+
+Việc phân công được tổ chức theo các lớp kỹ thuật của hệ thống. Mỗi phạm vi có đầu ra độc lập, đồng thời phụ thuộc vào các phần còn lại để hình thành chuỗi CI/CD hoàn chỉnh.
+
+\begin{table}[H]
+\centering
+\caption{Phân công theo phạm vi kỹ thuật}
+\begin{tabular}{|p{0.2\textwidth}|p{0.32\textwidth}|p{0.34\textwidth}|}
+\hline
+\textbf{Phụ trách} & \textbf{Phạm vi kỹ thuật} & \textbf{Sản phẩm chính} \\
+\hline
+Ngô Gia An & Hạ tầng cloud, K3s, namespace, secret, ArgoCD, Jenkins agent và Observability & Cluster sẵn sàng cho CI/CD, GitOps, Service Mesh và hệ thống quan sát \\
+\hline
+Nguyễn Bảo An & Jenkins CI/CD, Docker image, developer-build và cập nhật image tag & Pipeline build/test/push và cơ chế triển khai theo branch \\
+\hline
+Trương Nhật Đạt & GitOps manifest, Kustomize, overlay môi trường và ArgoCD application & Repo manifest có thể đồng bộ vào \texttt{dev}, \texttt{staging}, \texttt{developer-build} \\
+\hline
+Dương Tuấn Anh & Istio Service Mesh, mTLS, AuthorizationPolicy, retry, Kiali và ingress verification & Cấu hình mesh cho \texttt{dev}, kiểm chứng allow/deny, topology và ingress \\
+\hline
+\end{tabular}
+\end{table}

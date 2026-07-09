@@ -1,0 +1,63 @@
+\documentclass[12pt]{article}
+
+\usepackage{hcmus-report-template}
+
+% Disable indentation on new paragraphs
+\setlength{\parindent}{0pt}
+
+% Line spacing 1.5
+\renewcommand{\baselinestretch}{1.5}
+
+% Graphic path
+\graphicspath{{img/}}
+
+% Define course name, report name and report title.
+\newcommand{\coursename}{DevOps}
+\newcommand{\reportname}{Triển khai CI/CD, GitOps, Service Mesh và Observability cho hệ thống YAS --- Yet Another Shop}
+\newcommand{\reporttitle}{Báo Cáo Đồ Án 2: CI/CD, GitOps, Service Mesh và Observability}
+
+\newcommand{\studentname}{%
+  Ngô Gia An (23120205)\\%
+  Nguyễn Bảo An (23120207)\\%
+  Dương Tuấn Anh (23120208)\\%
+  Trương Nhật Đạt (23120231)%
+}
+\newcommand{\teachername}{Giáo viên hướng dẫn}
+
+% Header
+\lhead{\reporttitle}
+\rhead{%
+  Trường Đại học Khoa học Tự nhiên - ĐHQG HCM\\%
+  \coursename%
+}
+
+% Footer
+\newcommand{\leftfooter}{Nhóm: com-suon-bi-cha}
+\lfoot{\leftfooter}
+
+% ============ DOCUMENT ============
+\begin{document}
+
+\pagenumbering{roman}
+\input{content/title.tex}
+
+\tableofcontents
+\pagebreak
+\listoffigures
+\pagebreak
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{content/01-thong-tin-nhom.tex}
+\input{content/02-checklist.tex}
+\input{content/03-phan-cong.tex}
+\input{content/04-tong-quan.tex}
+\input{content/05-ha-tang.tex}
+\input{content/06-ci-cd.tex}
+\input{content/07-gitops.tex}
+\input{content/08-service-mesh.tex}
+\input{content/09-observability.tex}
+\input{content/10-ket-luan.tex}
+
+\end{document}

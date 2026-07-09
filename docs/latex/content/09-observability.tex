@@ -1,0 +1,5 @@
+\section{Observability}
+
+Nhóm đã triển khai bổ sung Observability trong namespace \texttt{observability}. Stack gồm Prometheus cho metrics, Grafana cho dashboard, Loki và Promtail cho log, Tempo cho distributed tracing và OpenTelemetry Collector cho việc tiếp nhận, xử lý, chuyển tiếp telemetry.
+
+Phần này là khung để bổ sung hình ảnh sau khi nhóm chụp UI Grafana. Các minh chứng cần ưu tiên gồm: Helm releases trong namespace \texttt{observability}, trạng thái pod/service, Prometheus targets hoặc query, Grafana datasources, JVM dashboard, Loki logs và Tempo traces. Nội dung chi tiết được chuẩn bị trong file \texttt{docs/observability-report.md}.

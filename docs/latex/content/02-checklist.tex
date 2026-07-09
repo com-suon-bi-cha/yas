@@ -1,0 +1,37 @@
+\section{Yêu Cầu Đồ Án}
+
+Phần này tổng hợp các yêu cầu chính của đồ án và trạng thái hoàn thành tương ứng. Các nội dung được đối chiếu theo kết quả triển khai thực tế trên Jenkins, repo GitOps, ArgoCD và Kubernetes cluster.
+
+\begin{table}[H]
+\centering
+\caption{Đối chiếu yêu cầu chính của đồ án}
+\small
+\begin{tabular}{|p{0.30\textwidth}|p{0.46\textwidth}|c|}
+\hline
+\textbf{Yêu cầu} & \textbf{Kết quả thực hiện} & \textbf{Trạng thái} \\
+\hline
+CI cho các service trong scope & Jenkins build/test/push Docker image cho các workload ứng dụng được chọn & Đạt \\
+\hline
+CD lên Kubernetes & ArgoCD đồng bộ manifest từ repo GitOps vào namespace \texttt{dev} và \texttt{staging} & Đạt \\
+\hline
+GitOps manifest & Kustomize quản lý base và overlays cho \texttt{dev}, \texttt{staging}, \texttt{developer-build} & Đạt \\
+\hline
+Service Mesh nâng cao & Istio cấu hình mTLS, retry, AuthorizationPolicy, ingress routing và Kiali visualization cho môi trường \texttt{dev}; \texttt{staging} có overlay Istio riêng & Đạt \\
+\hline
+Observability & Prometheus, Grafana, Loki, Tempo, Promtail và OpenTelemetry Collector được triển khai trong namespace \texttt{observability} & Đạt \\
+\hline
+Minh chứng vận hành & Screenshot Jenkins, ArgoCD, Kubernetes, Kiali và Observability được tổ chức trong thư mục báo cáo & Đạt \\
+\hline
+\end{tabular}
+\end{table}
+
+Phạm vi triển khai hiện tại gồm 16 workload ứng dụng:
+
+\begin{itemize}
+  \item Core services: \texttt{product}, \texttt{cart}, \texttt{order}, \texttt{customer}, \texttt{inventory}, \texttt{tax}, \texttt{payment}.
+  \item Supporting services: \texttt{media}, \texttt{search}, \texttt{location}, \texttt{sampledata}.
+  \item Storefront: \texttt{storefront-bff}, \texttt{storefront-ui}.
+  \item Backoffice và công cụ: \texttt{backoffice-bff}, \texttt{backoffice-ui}, \texttt{swagger-ui}.
+\end{itemize}
+
+Workload \texttt{kafka-connect} được triển khai như thành phần hỗ trợ CDC, không tính là service ứng dụng chính.

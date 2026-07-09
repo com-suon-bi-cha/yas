@@ -1,0 +1,7 @@
+\section{GitOps Và Kustomize}
+
+Repo \texttt{gitops-manifest-k8s} là nguồn cấu hình triển khai cho Kubernetes. Repo này tổ chức manifest theo mô hình \texttt{base} và \texttt{overlays}. \texttt{base} định nghĩa Deployment, Service, ServiceAccount và cấu hình chung của từng workload. Các overlay \texttt{dev}, \texttt{staging} và \texttt{developer-build} điều chỉnh image tag, namespace, replica và cấu hình môi trường.
+
+ArgoCD theo dõi repo GitOps và đồng bộ trạng thái mong muốn vào cluster. Khi Jenkins cập nhật image tag trong repo manifest, ArgoCD phát hiện thay đổi và rollout workload tương ứng. Cơ chế này bảo đảm quy trình CD có lịch sử rõ ràng, có thể truy vết qua commit GitOps và trạng thái ArgoCD.
+
+Minh chứng cho phần này gồm cấu trúc repo GitOps, kết quả Kustomize render, trạng thái ArgoCD sync và workload trong từng namespace.
