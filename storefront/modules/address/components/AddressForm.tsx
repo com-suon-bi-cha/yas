@@ -40,8 +40,16 @@ const AddressForm = ({
   useEffect(() => {
     getCountries().then((data) => {
       setCountries(data);
+      if (!address && data.length === 1) {
+        const [country] = data;
+        setValue('countryId', country.id);
+        setValue('countryName', country.name);
+        getStatesOrProvinces(country.id).then((statesOrProvincesData) => {
+          setStatesOrProvinces(statesOrProvincesData);
+        });
+      }
     });
-  }, []);
+  }, [address, setValue]);
 
   useEffect(() => {
     if (address) {
@@ -56,9 +64,9 @@ const AddressForm = ({
 
   const onCountryChange = async (event: any) => {
     setValue('countryName', event.target.selectedOptions[0].text);
-    setValue('stateOrProvinceId', 0 as any);
+    setValue('stateOrProvinceId', undefined as any);
     setValue('stateOrProvinceName', '');
-    setValue('districtId', 0 as any);
+    setValue('districtId', undefined as any);
     setValue('districtName', '');
     getStatesOrProvinces(event.target.value).then((data) => {
       setStatesOrProvinces(data);
@@ -68,6 +76,9 @@ const AddressForm = ({
 
   const onStateOrProvinceChange = async (event: any) => {
     setValue('stateOrProvinceName', event.target.selectedOptions[0].text);
+    setValue('districtId', undefined as any);
+    setValue('districtName', '');
+    setDistricts([]);
     getDistricts(event.target.value).then((data) => {
       setDistricts(data);
     });
@@ -137,6 +148,8 @@ const AddressForm = ({
                     required: { value: true, message: 'Please select state or province' },
                     onChange: onStateOrProvinceChange,
                   }}
+                  error={errors.stateOrProvinceId?.message}
+                  disabled={statesOrProvinces.length === 0}
                 />
               </div>
             </div>
@@ -169,6 +182,8 @@ const AddressForm = ({
                     setValue('districtName', event.target.selectedOptions[0].text);
                   },
                 }}
+                error={errors.districtId?.message}
+                disabled={districts.length === 0}
               />
             </div>
           </div>
