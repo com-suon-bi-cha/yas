@@ -14,6 +14,7 @@ Các tài liệu Project 2 hiện tại dùng cho báo cáo CI/CD, GitOps và Se
 - [member4-tasks.md](member4-tasks.md): công việc TV4 - Istio/Kiali/Service Mesh.
 - [member-report.md](member-report.md): mục lục khung báo cáo theo thành viên.
 - [member1-report.md](member1-report.md), [member2-report.md](member2-report.md), [member3-report.md](member3-report.md), [member4-report.md](member4-report.md): khung nội dung để chuyển sang báo cáo LaTeX.
+- [observability-report.md](observability-report.md): khung báo cáo bổ sung cho Prometheus, Grafana, Loki, Tempo và OpenTelemetry.
 
 Scope Project 2 hiện tại: 16 workload ứng dụng (`product`, `cart`, `order`, `customer`, `inventory`, `tax`, `payment`, `media`, `search`, `location`, `storefront-bff`, `storefront-ui`, `backoffice-bff`, `backoffice-ui`, `swagger-ui`, `sampledata`) và workload hỗ trợ `kafka-connect` trong `dev`/`staging`.
 

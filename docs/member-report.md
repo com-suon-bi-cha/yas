@@ -22,6 +22,7 @@ File này là mục lục cho các khung báo cáo cá nhân. Mỗi thành viên
 | TV2 | [member2-report.md](member2-report.md) | Jenkins CI/CD, Docker Hub, GitOps update, developer-build |
 | TV3 | [member3-report.md](member3-report.md) | GitOps repo, Kustomize, dev/staging/developer-build |
 | TV4 | [member4-report.md](member4-report.md) | Istio, mTLS, AuthorizationPolicy, retry, Kiali |
+| Nhóm | [observability-report.md](observability-report.md) | Observability stack: Prometheus, Grafana, Loki, Tempo, OpenTelemetry |
 
 ## Thư Mục Ảnh Khuyến Nghị
 
@@ -30,6 +31,7 @@ docs/images/member1-report/
 docs/images/member2-report/
 docs/images/member3-report/
 docs/images/member4-report/
+docs/images/observability-report/
 ```
 
 Tên ảnh nên dùng số thứ tự:

@@ -148,7 +148,18 @@ Kỳ vọng hiện tại:
 - [x] `dev` có AuthorizationPolicy.
 - [x] Allowed test: `storefront-bff` SA gọi `product` trả `200`.
 - [x] Denied test: `search` SA gọi `payment` trả `403 RBAC: access denied`.
-- [ ] Cần chụp Kiali graph/security/traffic cho báo cáo.
+- [x] Kiali Istio Config, Overview, Service Graph và ingress curl checks đã có screenshot trong [member4-report.md](member4-report.md).
+
+### Phase 7 - Observability
+
+- [x] Namespace `observability` tồn tại và đang `Active`.
+- [x] Helm releases Observability đang `deployed`: `prometheus`, `grafana`, `grafana-operator`, `loki`, `tempo`, `promtail`, `opentelemetry-operator`, `opentelemetry-collector`.
+- [x] Các pod chính của Prometheus/Grafana/Loki/Tempo/Promtail/OpenTelemetry đang `Running`.
+- [x] Grafana Operator quản lý `Grafana` resource ở trạng thái `complete/success`.
+- [x] Grafana đã có datasource Loki/Tempo và dashboard JVM/Hikari theo custom resources.
+- [x] OpenTelemetry Collector `READY 1/1`, nhận OTLP trên `4317`/`4318`, gửi metrics sang Prometheus và traces sang Tempo.
+- [ ] Cần chụp thêm UI Grafana cho datasource, dashboard metrics, Loki logs và Tempo traces nếu báo cáo yêu cầu bằng chứng trực quan.
+- [x] Khung báo cáo bổ sung nằm ở [observability-report.md](observability-report.md).
 
 ## Demo Check Nhanh
 

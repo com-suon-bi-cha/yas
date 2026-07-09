@@ -95,7 +95,7 @@ Các service này chỉ được đưa vào nếu có kịch bản demo riêng v
 | Manifest | Kustomize trong repo `gitops-manifest-k8s` |
 | Cluster | K3s trên GCP VM |
 | Service Mesh | Istio |
-| Observability | Kiali, Prometheus, Grafana |
+| Observability | Kiali, Prometheus, Grafana, Loki, Tempo, Promtail, OpenTelemetry Collector |
 | Auth | Keycloak + BFF pattern |
 | Data/CDC | PostgreSQL, Kafka, Debezium/Kafka Connect, Elasticsearch |
 
@@ -107,6 +107,7 @@ Các service này chỉ được đưa vào nếu có kịch bản demo riêng v
 | TV2 | Jenkins CI/CD, Docker build/push, developer-build, cleanup, GitOps update script | [member2-tasks.md](member2-tasks.md) | [member2-report.md](member2-report.md) |
 | TV3 | GitOps manifests, Kustomize overlays, dev/staging/developer-build, ArgoCD app resources | [member3-tasks.md](member3-tasks.md) | [member3-report.md](member3-report.md) |
 | TV4 | Istio Service Mesh, mTLS, AuthorizationPolicy, retry, Kiali, tổng hợp bằng chứng | [member4-tasks.md](member4-tasks.md) | [member4-report.md](member4-report.md) |
+| Nhóm | Observability stack: Prometheus/Grafana metrics, Loki logs, Tempo traces, OpenTelemetry Collector | - | [observability-report.md](observability-report.md) |
 
 ## 6. Dependency Giữa Các Thành Viên
 
