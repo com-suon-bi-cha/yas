@@ -1,4 +1,4 @@
-## CI trigger: backoffice-bff service.
+# CI trigger: rebuild backoffice-bff for v1.0.3 release candidate.
 FROM eclipse-temurin:25-jre-alpine
 RUN apk add --no-cache bash
 COPY target/backoffice*.jar app.jar
