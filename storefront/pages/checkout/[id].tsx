@@ -51,6 +51,7 @@ const Checkout = () => {
     handleSubmit: handleSubmitShippingAddress,
     register: registerShippingAddress,
     setValue: setValueShippingAddress,
+    getValues: getShippingAddressValues,
     formState: { errors: errorsShippingAddress },
   } = useForm<Address>();
 
@@ -58,6 +59,7 @@ const Checkout = () => {
     handleSubmit: handleSubmitBillingAddress,
     register: registerBillingAddress,
     setValue: setValueBillingAddress,
+    getValues: getBillingAddressValues,
     formState: { errors: errorsBillingAddress },
   } = useForm<Address>();
 
@@ -156,13 +158,7 @@ const Checkout = () => {
 
   const onSubmitShippingAddressForm: SubmitHandler<Address> = async (data: Address) => {
     try {
-      const newAddress = await performCreateUserAddress(data);
-      setShippingAddress(newAddress);
-      setAddShippingAddress(false);
-
-      if (sameAddress) {
-        setBillingAddress(newAddress);
-      }
+      await createAndUseShippingAddress(data);
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -170,12 +166,30 @@ const Checkout = () => {
 
   const onSubmitBillingAddressForm: SubmitHandler<Address> = async (data: Address) => {
     try {
-      const newAddress = await performCreateUserAddress(data);
-      setBillingAddress(newAddress);
-      setAddBillingAddress(false);
+      await createAndUseBillingAddress(data);
     } catch (error: any) {
       toast.error(error.message);
     }
+  };
+
+  const createAndUseShippingAddress = async (data: Address) => {
+    const newAddress = await performCreateUserAddress(data);
+    setShippingAddress(newAddress);
+    setAddShippingAddress(false);
+
+    if (sameAddress) {
+      setBillingAddress(newAddress);
+    }
+
+    return newAddress;
+  };
+
+  const createAndUseBillingAddress = async (data: Address) => {
+    const newAddress = await performCreateUserAddress(data);
+    setBillingAddress(newAddress);
+    setAddBillingAddress(false);
+
+    return newAddress;
   };
 
   const performCreateUserAddress = async (data: Address) => {
@@ -202,11 +216,27 @@ const Checkout = () => {
   };
 
   const onSubmitForm: SubmitHandler<Order> = async (data) => {
-    if (!shippingAddress) {
+    let selectedShippingAddress = shippingAddress;
+    let selectedBillingAddress = billingAddress;
+
+    try {
+      if (addShippingAddress) {
+        selectedShippingAddress = await createAndUseShippingAddress(getShippingAddressValues());
+      }
+
+      if (!sameAddress && addBillingAddress) {
+        selectedBillingAddress = await createAndUseBillingAddress(getBillingAddressValues());
+      }
+    } catch (error: any) {
+      toast.error(error.message);
+      return;
+    }
+
+    if (!selectedShippingAddress) {
       toast.error('Please choose shipping address!');
       return;
     }
-    if (!billingAddress && !sameAddress) {
+    if (!selectedBillingAddress && !sameAddress) {
       toast.error('Please choose billing address!');
       return;
     }
@@ -215,8 +245,8 @@ const Checkout = () => {
       return;
     }
 
-    order.shippingAddressPostVm = shippingAddress;
-    order.billingAddressPostVm = billingAddress ?? shippingAddress;
+    order.shippingAddressPostVm = selectedShippingAddress;
+    order.billingAddressPostVm = selectedBillingAddress ?? selectedShippingAddress;
     order.paymentMethod = paymentMethod;
 
     order.checkoutId = id as string;
