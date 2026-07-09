@@ -189,16 +189,10 @@ Caption: Job developer_build cho phép chọn branch cho từng workload trong s
 Caption: Console output in ra NodePort để developer truy cập service test.
 ```
 
-```markdown
-![Developer Build Health Check](images/member2-report/13-developer-build-health-check.png)
-Caption: Health check service sau khi developer_build deploy thành công.
-```
-
 Lệnh kiểm chứng:
 
 ```bash
 kubectl get deploy,svc -n developer-build
-curl http://<WORKER_IP>:<NODE_PORT>/<service>/actuator/health
 ```
 
 ## 8. Cleanup Job
@@ -206,12 +200,12 @@ curl http://<WORKER_IP>:<NODE_PORT>/<service>/actuator/health
 Screenshot cần chèn:
 
 ```markdown
-![Cleanup Console](images/member2-report/14-cleanup-console.png)
+![Cleanup Console](images/member2-report/13-cleanup-console.png)
 Caption: Cleanup job scale down hoặc dọn workload trong namespace developer-build.
 ```
 
 ```markdown
-![Developer Build After Cleanup](images/member2-report/15-developer-build-after-cleanup.png)
+![Developer Build After Cleanup](images/member2-report/14-developer-build-after-cleanup.png)
 Caption: Namespace developer-build sau cleanup, deployment không còn chạy pod test.
 ```
 

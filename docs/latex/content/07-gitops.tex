@@ -1,7 +1,41 @@
 \section{GitOps Và Kustomize}
+\label{sec:gitops}
+
+\subsection{Cấu trúc repo GitOps}
 
 Repo \texttt{gitops-manifest-k8s} là nguồn cấu hình triển khai cho Kubernetes. Repo này tổ chức manifest theo mô hình \texttt{base} và \texttt{overlays}. \texttt{base} định nghĩa Deployment, Service, ServiceAccount và cấu hình chung của từng workload. Các overlay \texttt{dev}, \texttt{staging} và \texttt{developer-build} điều chỉnh image tag, namespace, replica và cấu hình môi trường.
 
-ArgoCD theo dõi repo GitOps và đồng bộ trạng thái mong muốn vào cluster. Khi Jenkins cập nhật image tag trong repo manifest, ArgoCD phát hiện thay đổi và rollout workload tương ứng. Cơ chế này bảo đảm quy trình CD có lịch sử rõ ràng, có thể truy vết qua commit GitOps và trạng thái ArgoCD.
+Khi Jenkins build và push image thành công, script \texttt{update-gitops-manifest.sh} clone repo GitOps, chạy \texttt{kustomize edit set image} để cập nhật tag mới, sau đó commit và push. Commit message có dạng \texttt{ci(<env>): update <N> service(s) to <tag>}, giúp truy vết rõ ràng service nào được cập nhật trong lần triển khai nào.
 
-Minh chứng cho phần này gồm cấu trúc repo GitOps, kết quả Kustomize render, trạng thái ArgoCD sync và workload trong từng namespace.
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/09-gitops-commit.png}
+\caption{Commit do Jenkins tạo trong repo \texttt{gitops-manifest-k8s} để cập nhật image tag}
+\end{figure}
+
+\subsection{ArgoCD đồng bộ triển khai}
+
+ArgoCD theo dõi repo GitOps và đồng bộ trạng thái mong muốn vào cluster. Khi Jenkins cập nhật image tag trong repo manifest, ArgoCD phát hiện thay đổi và rollout workload tương ứng trong namespace \texttt{dev} hoặc \texttt{staging}. Stage \texttt{Update GitOps --- Dev} chạy khi pipeline trên branch \texttt{main} thành công. Stage \texttt{Update GitOps --- Staging} chỉ chạy khi có release tag dạng \texttt{vX.Y.Z} tại HEAD.
+
+Cơ chế này bảo đảm quy trình CD có lịch sử rõ ràng, có thể truy vết qua commit GitOps và trạng thái ArgoCD. Không có thao tác \texttt{kubectl apply} thủ công nào từ pipeline CI --- toàn bộ triển khai đều đi qua repo manifest.
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/10-argocd-dev-synced.png}
+\caption{ArgoCD application \texttt{yas-dev} ở trạng thái Synced sau khi GitOps update}
+\end{figure}
+
+\subsection{Luồng triển khai end-to-end}
+
+Luồng triển khai từ commit đến rollout được tóm tắt như sau:
+
+\begin{enumerate}
+\item Developer push code lên GitHub.
+\item Jenkins Multibranch Pipeline phát hiện thay đổi, chạy CI stages (test, quality, security scan).
+\item Jenkins build Docker image, push lên Docker Hub với tag là short commit SHA.
+\item Jenkins chạy script \texttt{update-gitops-manifest.sh}, commit image tag mới vào repo GitOps.
+\item ArgoCD phát hiện commit mới, đồng bộ manifest vào namespace tương ứng.
+\item Kubernetes rollout workload với image mới.
+\end{enumerate}
+
+Toàn bộ luồng này không yêu cầu thao tác thủ công sau khi developer push code. Pipeline tự động xử lý từ bước CI đến CD, và ArgoCD đảm bảo trạng thái cluster luôn khớp với repo manifest.

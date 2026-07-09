@@ -1,7 +1,145 @@
 \section{CI/CD Với Jenkins}
 
-Jenkins đảm nhiệm quy trình CI/CD cho các workload trong scope hiện tại. Pipeline thực hiện các bước chính: chọn service cần build, chạy kiểm tra cần thiết, build Docker image, push image lên Docker Hub với repository \texttt{bingsu1103/*}, sau đó cập nhật image tag trong repo GitOps. Cách tổ chức này giúp tách riêng mã nguồn ứng dụng và trạng thái triển khai, đồng thời giảm thao tác thủ công khi phát hành service mới.
+\subsection{Phạm vi pipeline}
 
-Ngoài pipeline triển khai chính, nhóm còn cấu hình luồng \texttt{developer-build}. Luồng này cho phép build và triển khai tạm thời service từ branch phát triển vào namespace \texttt{developer-build}. Deployment trong namespace này được scale về \texttt{0/0} khi không sử dụng để tiết kiệm tài nguyên cluster.
+Pipeline CI/CD phục vụ 16 workload ứng dụng trong scope hiện tại:
 
-Minh chứng cho phần này gồm Jenkins dashboard, pipeline stages, Docker Hub tags và kết quả developer-build.
+\begin{table}[H]
+\centering
+\caption{Danh sách workload trong scope pipeline}
+\begin{tabular}{|p{0.32\textwidth}|p{0.22\textwidth}|p{0.34\textwidth}|}
+\hline
+\textbf{Workload} & \textbf{Source} & \textbf{Image} \\
+\hline
+\texttt{product}, \texttt{cart}, \texttt{order}, \texttt{customer}, \texttt{inventory}, \texttt{tax}, \texttt{payment}, \texttt{media}, \texttt{search}, \texttt{location}, \texttt{sampledata}, \texttt{storefront-bff}, \texttt{backoffice-bff} & cùng tên thư mục & \texttt{bingsu1103/<tên>:<tag>} \\
+\hline
+\texttt{storefront-ui} & \texttt{storefront/} & \texttt{bingsu1103/storefront:<tag>} \\
+\texttt{backoffice-ui} & \texttt{backoffice/} & \texttt{bingsu1103/backoffice:<tag>} \\
+\hline
+\texttt{swagger-ui} & không build & \texttt{swaggerapi/swagger-ui} (public) \\
+\texttt{kafka-connect} & không build & \texttt{quay.io/debezium/connect:2.4} (public) \\
+\hline
+\end{tabular}
+\end{table}
+
+Các service ngoài scope pipeline hiện tại gồm \texttt{promotion}, \texttt{rating}, \texttt{delivery}, \texttt{recommendation}, \texttt{webhook} và \texttt{payment-paypal}.
+
+Pipeline được kích hoạt qua GitHub webhook hoặc Multibranch branch scan. Cơ chế monorepo detection cho phép chỉ build service có thay đổi, giảm thời gian chạy pipeline khi chỉ một phần nhỏ của repo bị thay đổi.
+
+\subsection{Cấu hình Jenkins}
+
+Jenkins sử dụng Multibranch Pipeline trỏ tới repo YAS và đọc \texttt{Jenkinsfile.ci} làm pipeline script. Agent chạy trên label \texttt{gcp-k8s-agent}, đảm bảo pipeline thực thi trên node có đủ công cụ build. Các credentials cần thiết gồm Docker Hub (\texttt{dockerhub-cred}), GitHub token (\texttt{github-pat}), kubeconfig (\texttt{gcp-kubeconfig}), SonarQube và Snyk token.
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/01-jenkins-dashboard.png}
+\caption{Jenkins dashboard hiển thị các job CI/CD của đồ án}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/02-multibranch-config.png}
+\caption{Multibranch Pipeline trỏ tới repo YAS và sử dụng \texttt{Jenkinsfile.ci}}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/03-jenkins-credentials.png}
+\caption{Các credentials gồm Docker Hub, GitHub token, kubeconfig, SonarQube và Snyk}
+\end{figure}
+
+\subsection{Các stage trong CI Pipeline}
+
+Pipeline CI/CD gồm các stage thực thi tuần tự:
+
+\begin{enumerate}
+\item \textbf{Pre-check}: kiểm tra môi trường build, xác nhận \texttt{java}, \texttt{mvn}, \texttt{gitleaks} và \texttt{snyk} sẵn sàng.
+\item \textbf{Check Skip}: phát hiện file thay đổi bằng \texttt{git diff} so với \texttt{origin/main}. Nếu chỉ có file tài liệu (\texttt{docs/}, \texttt{*.md}), pipeline bỏ qua các stage CI/CD. Trên main branch, khi \texttt{merge-base == HEAD}, pipeline sử dụng fallback \texttt{HEAD\textasciitilde1..HEAD} để tránh diff rỗng.
+\item \textbf{Secret Scanning}: quét secret bằng \texttt{gitleaks} trên phạm vi commit thay đổi.
+\item \textbf{Monorepo Execution}: với mỗi backend service, kiểm tra thư mục có thay đổi hay không. Nếu có, chạy \texttt{mvn test} và \texttt{mvn package}. Nếu có release tag hoặc thay đổi \texttt{common-library}, build toàn bộ service.
+\item \textbf{Code Quality / Quality Gate}: gửi kết quả phân tích lên SonarQube. Nếu SonarQube không khả dụng, pipeline ghi cảnh báo và tiếp tục các stage CD.
+\item \textbf{Coverage Report}: publish báo cáo JaCoCo cho từng service có thay đổi. Ngưỡng instruction coverage tối thiểu là 70\%.
+\item \textbf{Dependency Scan}: quét dependency bằng Snyk, lưu báo cáo và monitor project.
+\item \textbf{Docker Build \& Push}: build image và push lên Docker Hub (chi tiết ở mục tiếp theo).
+\item \textbf{Update GitOps}: cập nhật image tag trong repo \texttt{gitops-manifest-k8s} (chi tiết ở Mục~\ref{sec:gitops}).
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/04-pipeline-stages.png}
+\caption{Jenkins pipeline hiển thị các stage CI/CD chính}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/05-pipeline-console-output.png}
+\caption{Console output cho thấy service được detect, build và push image}
+\end{figure}
+
+\subsection{Docker Build và Push}
+
+Image được tag theo short commit SHA (7 ký tự đầu). Trên branch \texttt{main}, image được tag thêm \texttt{latest}. Khi có release tag dạng \texttt{vX.Y.Z} tại HEAD, image được tag thêm theo tên tag đó. Tất cả image được push lên Docker Hub với prefix \texttt{bingsu1103/}.
+
+Với UI workload, source code nằm trong thư mục \texttt{storefront/} và \texttt{backoffice/} nhưng image được đặt tên là \texttt{bingsu1103/storefront} và \texttt{bingsu1103/backoffice}. Pipeline phát hiện thay đổi dựa trên đường dẫn source, không dựa trên tên chart Kubernetes.
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/06-dockerhub-product-tags.jpg}
+\caption{Docker Hub hiển thị image tag của service \texttt{product}}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/07-dockerhub-location-tags.jpg}
+\caption{Docker Hub hiển thị image tag của service \texttt{location}}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/08-dockerhub-ui-tags.jpg}
+\caption{Docker Hub hiển thị image \texttt{storefront}/\texttt{backoffice} dùng cho UI workload}
+\end{figure}
+
+\subsection{Developer Build}
+
+Ngoài pipeline CI/CD chính, nhóm cấu hình job \texttt{developer-build} cho phép build và triển khai tạm thời từ branch phát triển. Job này nhận tham số là tên branch cho từng service trong scope. Pipeline resolve image tag từ commit ID trên remote branch, sau đó deploy vào namespace \texttt{developer-build} bằng Kustomize và \texttt{kubectl apply}.
+
+Namespace \texttt{developer-build} sử dụng NodePort Service để developer có thể truy cập service qua \texttt{<WORKER\_IP>:<NODE\_PORT>}. Deployment trong namespace này được dọn dẹp sau khi kiểm thử hoàn tất để tiết kiệm tài nguyên cluster.
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/11-developer-build-parameters.png}
+\caption{Job \texttt{developer\_build} cho phép chọn branch cho từng workload trong scope}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/12-developer-build-nodeport.png}
+\caption[Kết quả deploy và rollout trong namespace developer-build]{Console output hiển thị kết quả deploy và trạng thái rollout trong namespace \texttt{developer-build}}
+\end{figure}
+
+\subsection{Cleanup Job}
+
+Job \texttt{cleanup} xóa toàn bộ Deployment, Service, ConfigMap, ReplicaSet và Pod trong namespace \texttt{developer-build}. Namespace và Secret được giữ lại để tái sử dụng cho lần deploy tiếp theo. Sau khi xóa, job chạy \texttt{kubectl get all} để xác nhận không còn workload nào trong namespace.
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/13-cleanup-console.png}
+\caption{Cleanup job xóa workload trong namespace \texttt{developer-build}}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\reportimg{member2-report/14-developer-build-after-cleanup.png}
+\caption{Namespace \texttt{developer-build} sau cleanup, không còn Deployment hoặc Pod}
+\end{figure}
+
+\subsection{Sự cố và cách xử lý}
+
+Trong quá trình phát triển pipeline, nhóm gặp một số sự cố cần xử lý:
+
+\begin{itemize}
+\item \textbf{Diff rỗng trên main branch}: khi \texttt{merge-base} trùng với \texttt{HEAD}, \texttt{git diff} không trả kết quả. Pipeline đã bổ sung fallback \texttt{HEAD\textasciitilde1..HEAD} để phát hiện thay đổi trong commit mới nhất.
+\item \textbf{UI source mapping}: \texttt{storefront-ui} và \texttt{backoffice-ui} build từ thư mục \texttt{storefront/} và \texttt{backoffice/}, không phải từ tên chart Kubernetes. Pipeline cần map đúng source path để detect thay đổi.
+\item \textbf{Image public}: \texttt{swagger-ui} dùng image \texttt{swaggerapi/swagger-ui} và \texttt{kafka-connect} dùng image \texttt{quay.io/debezium/connect:2.4}. Hai workload này không cần build từ repo YAS.
+\end{itemize}
