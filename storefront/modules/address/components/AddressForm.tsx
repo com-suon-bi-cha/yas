@@ -56,15 +56,13 @@ const AddressForm = ({
 
   const onCountryChange = async (event: any) => {
     setValue('countryName', event.target.selectedOptions[0].text);
+    setValue('stateOrProvinceId', 0 as any);
+    setValue('stateOrProvinceName', '');
+    setValue('districtId', 0 as any);
+    setValue('districtName', '');
     getStatesOrProvinces(event.target.value).then((data) => {
       setStatesOrProvinces(data);
-      getDistricts(event.target.value).then((data) => {
-        if (data) {
-          setDistricts(data);
-        } else {
-          setDistricts([]);
-        }
-      });
+      setDistricts([]);
     });
   };
 
