@@ -15,4 +15,4 @@ public class CartApplication {
     }
 }
 
-// Developer-build smoke test marker for cart service.
+// Developer-build smoke test marker for cart service image tagging.
