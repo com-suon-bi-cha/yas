@@ -48,9 +48,9 @@ pipeline {
                         def tag = 'latest'
 
                         if (branch != 'main') {
-                            // Lấy commit ID 7 ký tự đầu của branch trên remote
+                            // Match the image tag format produced by Jenkinsfile.ci.
                             def remoteCommit = sh(
-                                script: "git ls-remote origin refs/heads/${branch} | cut -c1-7",
+                                script: "git ls-remote origin refs/heads/${branch} | cut -c1-8",
                                 returnStdout: true
                             ).trim()
 
